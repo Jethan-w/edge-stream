@@ -370,8 +370,8 @@ func RunClusterExample() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				clusterState := engine.(*StandardStreamEngine).clusterCoordinator.GetClusterState()
-				isLeader := engine.(*StandardStreamEngine).clusterCoordinator.IsLeader()
+				clusterState := engine.clusterCoordinator.GetClusterState()
+				isLeader := engine.clusterCoordinator.IsLeader()
 
 				fmt.Printf("集群状态: 总节点数=%d, 活跃节点数=%d, 是否为领导者=%v\n",
 					clusterState.TotalNodes, clusterState.ActiveNodes, isLeader)

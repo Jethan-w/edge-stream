@@ -426,8 +426,8 @@ func ExampleCustomProcessor() {
 	designer := pipeline.NewPipelineDesigner()
 
 	// 注册自定义处理器
-	designer.ProcessorFactory.RegisterProcessor("CustomProcessor", func() interface{} {
-		return processor.FormatConverter{}
+	designer.ProcessorFactory.RegisterProcessor("CustomProcessor", func() processor.Processor {
+		return processor.NewCustomProcessor()
 	})
 
 	// 创建流程组

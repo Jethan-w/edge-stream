@@ -58,7 +58,7 @@ type StandardStreamEngine struct {
 	status             EngineStatus
 	configManager      *ConfigManager.ConfigManager
 	connectorRegistry  *ConnectorRegistry.ConnectorRegistry
-	metricCollector    *MetricCollector.MetricCollector
+	metricCollector    MetricCollector.MetricCollector
 	stateManager       *statemanager.StateManager
 	threadPoolManager  ThreadPoolManager
 	clusterCoordinator ClusterCoordinator
@@ -314,7 +314,7 @@ func (e *StandardStreamEngine) SetConnectorRegistry(cr *ConnectorRegistry.Connec
 }
 
 // SetMetricCollector 设置指标收集器
-func (e *StandardStreamEngine) SetMetricCollector(mc *MetricCollector.MetricCollector) {
+func (e *StandardStreamEngine) SetMetricCollector(mc MetricCollector.MetricCollector) {
 	e.metricCollector = mc
 }
 
