@@ -6,11 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edge-stream/internal/MetricCollector"
-	"github.com/edge-stream/internal/StateManager"
-	"github.com/edge-stream/internal/flowfile"
-	"github.com/edge-stream/internal/sink/ErrorRouter"
-	"github.com/edge-stream/internal/sink/RetryManager"
+	"github.com/crazy/edge-stream/internal/MetricCollector"
+	statemanager "github.com/crazy/edge-stream/internal/StateManager"
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // Sink 是数据流转的出口通道，负责将处理后的数据输出到外部目标系统
@@ -24,7 +22,7 @@ type Sink struct {
 
 	// 状态管理
 	state    SinkState
-	stateMgr StateManager.StateManager
+	stateMgr statemanager.StateManager
 
 	// 错误处理
 	errorHandler *SinkErrorHandler
@@ -281,9 +279,13 @@ func (s *Sink) executeOutput(flowFile *flowfile.FlowFile, adapter TargetAdapter)
 func (s *Sink) createTargetAdapter(config OutputTargetConfig) (TargetAdapter, error) {
 	switch config.Type {
 	case OutputTargetTypeFileSystem:
-		return NewFileSystemOutputAdapter(config), nil
+		return NewFileSystemOutputAdapter(map[string]string{
+			"id": config.ID,
+		}), nil
 	case OutputTargetTypeDatabase:
-		return NewDatabaseOutputAdapter(config), nil
+		return NewDatabaseOutputAdapter(map[string]string{
+			"id": config.ID,
+		}), nil
 	case OutputTargetTypeMessageQueue:
 		return NewMessageQueueOutputAdapter(config), nil
 	case OutputTargetTypeSearchEngine:
@@ -317,11 +319,11 @@ func (s *Sink) RegisterCustomProtocol(name string, adapter TargetAdapter) {
 }
 
 // GetErrorHandler 获取错误处理器
-func (s *Sink) GetErrorHandler() *ErrorRouter.SinkErrorHandler {
+func (s *Sink) GetErrorHandler() *SinkErrorHandler {
 	return s.errorHandler
 }
 
 // GetRetryManager 获取重试管理器
-func (s *Sink) GetRetryManager() *RetryManager.RetryManager {
+func (s *Sink) GetRetryManager() *RetryManager {
 	return s.retryMgr
 }

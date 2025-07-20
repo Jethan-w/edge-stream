@@ -1,15 +1,16 @@
 package pipeline
 
 import (
-	"context"
 	"testing"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // TestFlowFile 测试FlowFile基本功能
 func TestFlowFile(t *testing.T) {
 	// 创建FlowFile
-	flowFile := NewFlowFile()
+	flowFile := flowfile.FlowFile{}
 
 	// 测试基本属性
 	if flowFile.UUID == "" {
@@ -21,20 +22,20 @@ func TestFlowFile(t *testing.T) {
 	}
 
 	// 测试属性设置
-	flowFile.AddAttribute("test_key", "test_value")
-	if flowFile.GetAttribute("test_key") != "test_value" {
+	flowFile.Attributes["test_key"] = "test_value"
+	if flowFile.Attributes["test_key"] != "test_value" {
 		t.Error("FlowFile attribute not set correctly")
 	}
 
 	// 测试内容设置
 	testContent := []byte("test content")
-	flowFile.SetContent(testContent)
+	flowFile.Content = (testContent)
 
-	if flowFile.GetSize() != int64(len(testContent)) {
+	if flowFile.Size != int64(len(testContent)) {
 		t.Error("FlowFile size not set correctly")
 	}
 
-	if string(flowFile.GetContent()) != string(testContent) {
+	if string(flowFile.Content) != string(testContent) {
 		t.Error("FlowFile content not set correctly")
 	}
 }
@@ -101,21 +102,21 @@ func TestConnection(t *testing.T) {
 	connection := NewConnection("test-conn", "Test Connection", sourceProcessor, destProcessor)
 
 	// 测试队列功能
-	flowFile1 := NewFlowFile()
-	flowFile1.SetContent([]byte("data1"))
-	flowFile1.AddAttribute("order", "1")
+	flowFile1 := flowfile.FlowFile{}
+	flowFile1.Content = ([]byte("data1"))
+	flowFile1.Attributes["order"] = "1"
 
-	flowFile2 := NewFlowFile()
-	flowFile2.SetContent([]byte("data2"))
-	flowFile2.AddAttribute("order", "2")
+	flowFile2 := flowfile.FlowFile{}
+	flowFile2.Content = ([]byte("data2"))
+	flowFile2.Attributes["order"] = "2"
 
 	// 入队
-	err := connection.Enqueue(flowFile1)
+	err := connection.Enqueue(&flowFile1)
 	if err != nil {
 		t.Errorf("Failed to enqueue flowFile1: %v", err)
 	}
 
-	err = connection.Enqueue(flowFile2)
+	err = connection.Enqueue(&flowFile2)
 	if err != nil {
 		t.Errorf("Failed to enqueue flowFile2: %v", err)
 	}
@@ -136,7 +137,7 @@ func TestConnection(t *testing.T) {
 	}
 
 	// 验证先进先出
-	if dequeuedFlowFile.GetAttribute("order") != "1" {
+	if dequeuedFlowFile.Attributes["order"] != "1" {
 		t.Error("OldestFirstPrioritizer not working correctly")
 	}
 }
@@ -144,23 +145,23 @@ func TestConnection(t *testing.T) {
 // TestQueuePrioritizers 测试优先级策略
 func TestQueuePrioritizers(t *testing.T) {
 	// 创建测试队列
-	queue := []*FlowFile{}
+	queue := []*flowfile.FlowFile{}
 
-	flowFile1 := NewFlowFile()
-	flowFile1.SetContent([]byte("data1"))
+	flowFile1 := flowfile.FlowFile{}
+	flowFile1.Content = ([]byte("data1"))
 	flowFile1.Timestamp = time.Now().Add(-time.Hour) // 1小时前
 
-	flowFile2 := NewFlowFile()
-	flowFile2.SetContent([]byte("data2"))
+	flowFile2 := flowfile.FlowFile{}
+	flowFile2.Content = ([]byte("data2"))
 	flowFile2.Timestamp = time.Now() // 现在
 
-	queue = append(queue, flowFile1, flowFile2)
+	queue = append(queue, &flowFile1, &flowFile2)
 
 	// 测试先进先出
 	oldestFirst := NewOldestFirstPrioritizer()
 	selected := oldestFirst.SelectNext(queue)
 
-	if selected != flowFile1 {
+	if selected != &flowFile1 {
 		t.Error("OldestFirstPrioritizer should select the oldest FlowFile")
 	}
 
@@ -168,7 +169,7 @@ func TestQueuePrioritizers(t *testing.T) {
 	newestFirst := NewNewestFirstPrioritizer()
 	selected = newestFirst.SelectNext(queue)
 
-	if selected != flowFile2 {
+	if selected != &flowFile2 {
 		t.Error("NewestFirstPrioritizer should select the newest FlowFile")
 	}
 }
@@ -282,7 +283,7 @@ func TestConnectionQueue(t *testing.T) {
 	}
 
 	// 测试入队
-	flowFile := NewFlowFile()
+	flowFile := &flowfile.FlowFile{}
 	err := queue.Enqueue(flowFile)
 	if err != nil {
 		t.Errorf("Failed to enqueue: %v", err)
@@ -310,8 +311,8 @@ func TestConnectionQueue(t *testing.T) {
 
 // TestUUIDGeneration 测试UUID生成
 func TestUUIDGeneration(t *testing.T) {
-	uuid1 := generateUUID()
-	uuid2 := generateUUID()
+	uuid1 := flowfile.GenerateUUID()
+	uuid2 := flowfile.GenerateUUID()
 
 	if uuid1 == "" {
 		t.Error("Generated UUID should not be empty")
@@ -324,8 +325,8 @@ func TestUUIDGeneration(t *testing.T) {
 
 // TestLineageIDGeneration 测试LineageID生成
 func TestLineageIDGeneration(t *testing.T) {
-	lineageID1 := generateLineageID()
-	lineageID2 := generateLineageID()
+	lineageID1 := flowfile.GenerateLineageID()
+	lineageID2 := flowfile.GenerateLineageID()
 
 	if lineageID1 == "" {
 		t.Error("Generated LineageID should not be empty")
@@ -339,18 +340,19 @@ func TestLineageIDGeneration(t *testing.T) {
 // BenchmarkFlowFileCreation 基准测试FlowFile创建
 func BenchmarkFlowFileCreation(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		NewFlowFile()
+		flowfile.NewFlowFile()
 	}
 }
 
 // BenchmarkFlowFileAttributeAccess 基准测试FlowFile属性访问
 func BenchmarkFlowFileAttributeAccess(b *testing.B) {
-	flowFile := NewFlowFile()
-	flowFile.AddAttribute("test_key", "test_value")
+	flowFile := flowfile.NewFlowFile()
+	flowFile.Attributes["test_key"] = "test_value"
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		flowFile.GetAttribute("test_key")
+		p := flowFile.Attributes["test_key"]
+		flowFile.Attributes[p] = "test_value"
 	}
 }
 
@@ -362,7 +364,7 @@ func BenchmarkConnectionEnqueue(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		flowFile := NewFlowFile()
+		flowFile := flowfile.NewFlowFile()
 		connection.Enqueue(flowFile)
 	}
 }

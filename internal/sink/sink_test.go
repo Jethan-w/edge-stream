@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/edge-stream/internal/flowfile"
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 func TestNewSink(t *testing.T) {
@@ -250,20 +250,17 @@ func TestCustomProtocolRegistry(t *testing.T) {
 func TestCreateFlowFile(t *testing.T) {
 	// 创建测试 FlowFile
 	ff := flowfile.NewFlowFile()
-	ff.SetAttribute("filename", "test.txt")
-	ff.SetAttribute("uuid", "12345678-1234-1234-1234-123456789abc")
-	ff.SetContent([]byte("Hello, World!"))
+	ff.Attributes["filename"] = "test.txt"
+	ff.Attributes["uuid"] = "12345678-1234-1234-1234-123456789abc"
+	ff.Content = ([]byte("Hello, World!"))
 
 	// 验证属性
-	if ff.GetAttribute("filename") != "test.txt" {
-		t.Errorf("Expected filename test.txt, got %s", ff.GetAttribute("filename"))
+	if ff.Attributes["filename"] != "test.txt" {
+		t.Errorf("Expected filename test.txt, got %s", ff.Attributes["filename"])
 	}
 
 	// 验证内容
-	content, err := ff.GetContent()
-	if err != nil {
-		t.Errorf("Failed to get content: %v", err)
-	}
+	content := ff.Content
 
 	if string(content) != "Hello, World!" {
 		t.Errorf("Expected content Hello, World!, got %s", string(content))

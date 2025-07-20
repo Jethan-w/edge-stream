@@ -155,13 +155,13 @@ type ManagerConfiguration struct {
 
 // StandardStateManager 标准状态管理器实现
 type StandardStateManager struct {
-	config          ManagerConfiguration
-	localProvider   StateProvider
-	clusterProvider StateProvider
-	consistencyMgr  *StateConsistencyManager
-	checkpointMgr   *StateCheckpointManager
-	walManager      *WriteAheadLogManager
-	lockManager     *DistributedStateLock
+	Config          ManagerConfiguration
+	LocalProvider   StateProvider
+	ClusterProvider StateProvider
+	ConsistencyMgr  *StateConsistencyManager
+	CheckpointMgr   *StateCheckpointManager
+	WalManager      *WriteAheadLogManager
+	LockManager     *DistributedStateLock
 	mu              sync.RWMutex
 	ctx             context.Context
 	cancel          context.CancelFunc
@@ -182,21 +182,21 @@ func (sm *StandardStateManager) Initialize(config ManagerConfiguration) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
-	sm.config = config
-	sm.localProvider = config.LocalProvider
-	sm.clusterProvider = config.ClusterProvider
+	sm.Config = config
+	sm.LocalProvider = config.LocalProvider
+	sm.ClusterProvider = config.ClusterProvider
 
 	// 初始化一致性管理器
-	sm.consistencyMgr = NewStateConsistencyManager(config.LocalProvider, config.ClusterProvider)
+	sm.ConsistencyMgr = NewStateConsistencyManager(config.LocalProvider, config.ClusterProvider)
 
 	// 初始化检查点管理器
-	sm.checkpointMgr = NewStateCheckpointManager()
+	sm.CheckpointMgr = NewStateCheckpointManager()
 
 	// 初始化预写日志管理器
-	sm.walManager = NewWriteAheadLogManager()
+	sm.WalManager = NewWriteAheadLogManager()
 
 	// 初始化分布式锁管理器
-	sm.lockManager = NewDistributedStateLock()
+	sm.LockManager = NewDistributedStateLock()
 
 	// 启动后台同步任务
 	if config.SyncInterval > 0 {
@@ -217,13 +217,13 @@ func (sm *StandardStateManager) GetState(componentID string) (*StateMap, error) 
 	defer sm.mu.RUnlock()
 
 	// 根据一致性级别选择状态源
-	switch sm.config.ConsistencyLevel {
+	switch sm.Config.ConsistencyLevel {
 	case ConsistencyLevelStrong:
 		// 强一致性：从集群获取最新状态
-		return sm.clusterProvider.LoadState(componentID)
+		return sm.ClusterProvider.LoadState(componentID)
 	case ConsistencyLevelReadCommitted:
 		// 读已提交：从本地获取，但确保已同步
-		state, err := sm.localProvider.LoadState(componentID)
+		state, err := sm.LocalProvider.LoadState(componentID)
 		if err != nil {
 			return nil, err
 		}
@@ -232,7 +232,7 @@ func (sm *StandardStateManager) GetState(componentID string) (*StateMap, error) 
 		return state, nil
 	default:
 		// 最终一致性：从本地获取
-		return sm.localProvider.LoadState(componentID)
+		return sm.LocalProvider.LoadState(componentID)
 	}
 }
 
@@ -242,18 +242,18 @@ func (sm *StandardStateManager) SetState(componentID string, stateMap *StateMap)
 	defer sm.mu.Unlock()
 
 	// 记录预写日志
-	if err := sm.walManager.LogStateUpdate(componentID, nil, stateMap); err != nil {
+	if err := sm.WalManager.LogStateUpdate(componentID, nil, stateMap); err != nil {
 		return fmt.Errorf("failed to log state update: %w", err)
 	}
 
 	// 持久化到本地
-	if err := sm.localProvider.PersistState(componentID, stateMap); err != nil {
+	if err := sm.LocalProvider.PersistState(componentID, stateMap); err != nil {
 		return fmt.Errorf("failed to persist state locally: %w", err)
 	}
 
 	// 根据一致性级别决定是否同步到集群
-	if sm.config.ConsistencyLevel == ConsistencyLevelStrong {
-		if err := sm.clusterProvider.PersistState(componentID, stateMap); err != nil {
+	if sm.Config.ConsistencyLevel == ConsistencyLevelStrong {
+		if err := sm.ClusterProvider.PersistState(componentID, stateMap); err != nil {
 			return fmt.Errorf("failed to persist state to cluster: %w", err)
 		}
 	}
@@ -279,19 +279,19 @@ func (sm *StandardStateManager) UpdateState(componentID string, update StateUpda
 // UpdateStateTransactionally 事务性更新状态
 func (sm *StandardStateManager) UpdateStateTransactionally(componentID string, update StateUpdate) error {
 	// 获取分布式锁
-	if err := sm.lockManager.AcquireLock(componentID); err != nil {
+	if err := sm.LockManager.AcquireLock(componentID); err != nil {
 		return fmt.Errorf("failed to acquire lock: %w", err)
 	}
-	defer sm.lockManager.ReleaseLock(componentID)
+	defer sm.LockManager.ReleaseLock(componentID)
 
 	// 加载当前状态
-	currentState, err := sm.localProvider.LoadState(componentID)
+	currentState, err := sm.LocalProvider.LoadState(componentID)
 	if err != nil {
 		return fmt.Errorf("failed to load current state: %w", err)
 	}
 
 	// 记录预写日志
-	if err := sm.walManager.LogStateUpdate(componentID, currentState, nil); err != nil {
+	if err := sm.WalManager.LogStateUpdate(componentID, currentState, nil); err != nil {
 		return fmt.Errorf("failed to log state update: %w", err)
 	}
 
@@ -299,19 +299,19 @@ func (sm *StandardStateManager) UpdateStateTransactionally(componentID string, u
 	newState := update(currentState)
 
 	// 持久化新状态
-	if err := sm.localProvider.PersistState(componentID, newState); err != nil {
+	if err := sm.LocalProvider.PersistState(componentID, newState); err != nil {
 		return fmt.Errorf("failed to persist new state: %w", err)
 	}
 
 	// 同步到集群
-	if sm.clusterProvider != nil {
-		if err := sm.clusterProvider.PersistState(componentID, newState); err != nil {
+	if sm.ClusterProvider != nil {
+		if err := sm.ClusterProvider.PersistState(componentID, newState); err != nil {
 			return fmt.Errorf("failed to persist state to cluster: %w", err)
 		}
 	}
 
 	// 完成预写日志
-	if err := sm.walManager.LogStateUpdate(componentID, currentState, newState); err != nil {
+	if err := sm.WalManager.LogStateUpdate(componentID, currentState, newState); err != nil {
 		return fmt.Errorf("failed to complete state update log: %w", err)
 	}
 
@@ -320,7 +320,7 @@ func (sm *StandardStateManager) UpdateStateTransactionally(componentID string, u
 
 // SyncState 同步状态
 func (sm *StandardStateManager) SyncState(componentID string) error {
-	return sm.consistencyMgr.SyncState(componentID)
+	return sm.ConsistencyMgr.SyncState(componentID)
 }
 
 // CreateCheckpoint 创建检查点
@@ -330,12 +330,12 @@ func (sm *StandardStateManager) CreateCheckpoint(componentID string) error {
 		return fmt.Errorf("failed to get state for checkpoint: %w", err)
 	}
 
-	return sm.checkpointMgr.CreateCheckpoint(componentID, state)
+	return sm.CheckpointMgr.CreateCheckpoint(componentID, state)
 }
 
 // RestoreCheckpoint 恢复检查点
 func (sm *StandardStateManager) RestoreCheckpoint(componentID string) error {
-	state, err := sm.checkpointMgr.RestoreLatestCheckpoint(componentID)
+	state, err := sm.CheckpointMgr.RestoreLatestCheckpoint(componentID)
 	if err != nil {
 		return fmt.Errorf("failed to restore checkpoint: %w", err)
 	}
@@ -350,14 +350,14 @@ func (sm *StandardStateManager) Shutdown() error {
 
 	sm.cancel()
 
-	if sm.localProvider != nil {
-		if err := sm.localProvider.Shutdown(); err != nil {
+	if sm.LocalProvider != nil {
+		if err := sm.LocalProvider.Shutdown(); err != nil {
 			return fmt.Errorf("failed to shutdown local provider: %w", err)
 		}
 	}
 
-	if sm.clusterProvider != nil {
-		if err := sm.clusterProvider.Shutdown(); err != nil {
+	if sm.ClusterProvider != nil {
+		if err := sm.ClusterProvider.Shutdown(); err != nil {
 			return fmt.Errorf("failed to shutdown cluster provider: %w", err)
 		}
 	}
@@ -367,7 +367,7 @@ func (sm *StandardStateManager) Shutdown() error {
 
 // startSyncTask 启动同步任务
 func (sm *StandardStateManager) startSyncTask() {
-	ticker := time.NewTicker(sm.config.SyncInterval)
+	ticker := time.NewTicker(sm.Config.SyncInterval)
 	defer ticker.Stop()
 
 	for {
@@ -383,7 +383,7 @@ func (sm *StandardStateManager) startSyncTask() {
 
 // startCheckpointTask 启动检查点任务
 func (sm *StandardStateManager) startCheckpointTask() {
-	ticker := time.NewTicker(sm.config.CheckpointInterval)
+	ticker := time.NewTicker(sm.Config.CheckpointInterval)
 	defer ticker.Stop()
 
 	for {

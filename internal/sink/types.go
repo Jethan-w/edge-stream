@@ -2,6 +2,8 @@ package sink
 
 import (
 	"time"
+
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // OutputTargetType 输出目标类型
@@ -133,16 +135,16 @@ func (r ReliabilityStrategy) String() string {
 }
 
 // ErrorRoutingStrategy 错误路由策略
-type ErrorRoutingStrategy int
+type ErrorRoutingStrategyType int
 
 const (
-	ErrorRoutingStrategyRetry ErrorRoutingStrategy = iota
+	ErrorRoutingStrategyRetry ErrorRoutingStrategyType = iota
 	ErrorRoutingStrategyRouteToError
 	ErrorRoutingStrategyDrop
 	ErrorRoutingStrategyDeadLetter
 )
 
-func (e ErrorRoutingStrategy) String() string {
+func (e ErrorRoutingStrategyType) String() string {
 	switch e {
 	case ErrorRoutingStrategyRetry:
 		return "Retry"
@@ -192,12 +194,12 @@ type ReliabilityConfig struct {
 
 // ErrorHandlingConfig 错误处理配置
 type ErrorHandlingConfig struct {
-	DefaultStrategy     ErrorRoutingStrategy `json:"default_strategy"`
-	MaxRetryCount       int                  `json:"max_retry_count"`
-	ErrorQueueName      string               `json:"error_queue_name"`
-	DeadLetterQueueName string               `json:"dead_letter_queue_name"`
-	LogErrors           bool                 `json:"log_errors"`
-	NotifyOnError       bool                 `json:"notify_on_error"`
+	DefaultStrategy     ErrorRoutingStrategyType `json:"default_strategy"`
+	MaxRetryCount       int                      `json:"max_retry_count"`
+	ErrorQueueName      string                   `json:"error_queue_name"`
+	DeadLetterQueueName string                   `json:"dead_letter_queue_name"`
+	LogErrors           bool                     `json:"log_errors"`
+	NotifyOnError       bool                     `json:"notify_on_error"`
 }
 
 // RetryConfig 重试配置
@@ -222,9 +224,14 @@ type OutputTargetMetadata struct {
 
 // OutputOperation 输出操作
 type OutputOperation struct {
-	flowFile interface{} // *flowfile.FlowFile
+	flowFile *flowfile.FlowFile
 	adapter  TargetAdapter
 	sink     *Sink
+}
+
+func (o *OutputOperation) GetOperationID() string {
+	// TODO implement me
+	panic("implement me")
 }
 
 // Execute 执行输出操作

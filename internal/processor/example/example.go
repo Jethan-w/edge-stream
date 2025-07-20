@@ -8,24 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/edge-stream/internal/processor"
-	"github.com/edge-stream/internal/processor/DataTransformer"
-	"github.com/edge-stream/internal/processor/ErrorHandler"
-	"github.com/edge-stream/internal/processor/RouteProcessor"
-	"github.com/edge-stream/internal/processor/ScriptProcessor"
-	"github.com/edge-stream/internal/processor/SemanticExtractor"
+	"github.com/crazy/edge-stream/internal/flowfile"
+	"github.com/crazy/edge-stream/internal/processor"
 )
 
 // ExampleProcessor 示例处理器
 func ExampleProcessor() {
 	fmt.Println("=== EdgeStream Processor 示例 ===")
-	
+
 	// 创建处理器管理器
 	manager := processor.NewProcessorManager()
-	
+
 	// 注册各种处理器
 	registerProcessors(manager)
-	
+
 	// 运行示例
 	runExamples(manager)
 }
@@ -33,28 +29,28 @@ func ExampleProcessor() {
 // registerProcessors 注册处理器
 func registerProcessors(manager *processor.ProcessorManager) {
 	// 注册数据转换处理器
-	manager.RegisterProcessor("record_transformer", DataTransformer.NewRecordTransformer())
-	manager.RegisterProcessor("content_modifier", DataTransformer.NewContentModifier())
-	manager.RegisterProcessor("format_converter", DataTransformer.NewFormatConverter())
-	
+	manager.RegisterProcessor("record_transformer", processor.NewRecordTransformer())
+	manager.RegisterProcessor("content_modifier", processor.NewContentModifier())
+	manager.RegisterProcessor("format_converter", processor.NewFormatConverter())
+
 	// 注册路由处理器
-	manager.RegisterProcessor("route_processor", RouteProcessor.NewRouteProcessor())
-	manager.RegisterProcessor("advanced_route_processor", RouteProcessor.NewAdvancedRouteProcessor())
-	
+	manager.RegisterProcessor("route_processor", processor.NewRouteProcessor())
+	manager.RegisterProcessor("advanced_route_processor", processor.NewAdvancedRouteProcessor())
+
 	// 注册语义提取处理器
-	manager.RegisterProcessor("text_semantic_extractor", SemanticExtractor.NewTextSemanticExtractor())
-	manager.RegisterProcessor("structured_semantic_extractor", SemanticExtractor.NewStructuredDataSemanticExtractor())
-	manager.RegisterProcessor("advanced_semantic_extractor", SemanticExtractor.NewAdvancedSemanticExtractor())
-	
+	manager.RegisterProcessor("text_semantic_extractor", processor.NewTextSemanticExtractor())
+	manager.RegisterProcessor("structured_semantic_extractor", processor.NewStructuredDataSemanticExtractor())
+	manager.RegisterProcessor("advanced_semantic_extractor", processor.NewAdvancedSemanticExtractor())
+
 	// 注册错误处理处理器
-	manager.RegisterProcessor("error_handler", ErrorHandler.NewErrorHandler())
-	manager.RegisterProcessor("error_handling_processor", ErrorHandler.NewErrorHandlingProcessor())
-	
+	manager.RegisterProcessor("error_handler", processor.NewErrorHandler())
+	manager.RegisterProcessor("error_handling_processor", processor.NewErrorHandlingProcessor())
+
 	// 注册脚本处理器
-	manager.RegisterProcessor("script_processor", ScriptProcessor.NewScriptProcessor())
-	manager.RegisterProcessor("custom_processor", ScriptProcessor.NewCustomProcessor())
-	manager.RegisterProcessor("dynamic_processor", ScriptProcessor.NewDynamicProcessor())
-	
+	manager.RegisterProcessor("script_processor", processor.NewScriptProcessor())
+	manager.RegisterProcessor("custom_processor", processor.NewCustomProcessor())
+	manager.RegisterProcessor("dynamic_processor", processor.NewDynamicProcessor())
+
 	fmt.Printf("已注册 %d 个处理器\n", len(manager.ListProcessors()))
 }
 
@@ -62,16 +58,16 @@ func registerProcessors(manager *processor.ProcessorManager) {
 func runExamples(manager *processor.ProcessorManager) {
 	// 示例1：数据转换
 	exampleDataTransformation(manager)
-	
+
 	// 示例2：路由处理
 	exampleRouting(manager)
-	
+
 	// 示例3：语义提取
 	exampleSemanticExtraction(manager)
-	
+
 	// 示例4：错误处理
 	exampleErrorHandling(manager)
-	
+
 	// 示例5：脚本处理
 	exampleScriptProcessing(manager)
 }
@@ -79,46 +75,47 @@ func runExamples(manager *processor.ProcessorManager) {
 // exampleDataTransformation 数据转换示例
 func exampleDataTransformation(manager *processor.ProcessorManager) {
 	fmt.Println("\n--- 数据转换示例 ---")
-	
+
 	// 创建测试数据
 	testData := []map[string]interface{}{
 		{
-			"user_id":      "12345",
-			"user_name":    "张三",
+			"user_id":       "12345",
+			"user_name":     "张三",
 			"email_address": "zhangsan@example.com",
-			"age":          30,
+			"age":           30,
 		},
 		{
-			"user_id":      "67890",
-			"user_name":    "李四",
+			"user_id":       "67890",
+			"user_name":     "李四",
 			"email_address": "lisi@example.com",
-			"age":          25,
+			"age":           25,
 		},
 	}
-	
+
 	jsonData, _ := json.Marshal(testData)
-	
-	flowFile := &processor.FlowFile{
-		ID:         "test_flowfile_001",
+
+	flowFile := &flowfile.FlowFile{
+		UUID:       "test_flowfile_001",
 		Content:    jsonData,
 		Attributes: make(map[string]string),
 		Size:       int64(len(jsonData)),
 		Timestamp:  time.Now(),
 		LineageID:  "lineage_001",
 	}
-	
+
 	// 使用记录转换器
 	recordTransformer, _ := manager.GetProcessor("record_transformer")
 	ctx := processor.ProcessContext{
+		Context: context.Background(),
 		Properties: map[string]string{
-			"source.format":         "json",
-			"target.format":         "json",
-			"transformation.rules":  "field_mapping",
+			"source.format":        "json",
+			"target.format":        "json",
+			"transformation.rules": "field_mapping",
 		},
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := recordTransformer.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("记录转换失败: %v", err)
@@ -131,33 +128,33 @@ func exampleDataTransformation(manager *processor.ProcessorManager) {
 // exampleRouting 路由处理示例
 func exampleRouting(manager *processor.ProcessorManager) {
 	fmt.Println("\n--- 路由处理示例 ---")
-	
+
 	// 创建测试数据
-	flowFile := &processor.FlowFile{
-		ID:    "test_flowfile_002",
+	flowFile := &flowfile.FlowFile{
+		UUID:    "test_flowfile_002",
 		Content: []byte(`{"priority": "high", "category": "urgent", "content": "This is an urgent message"}`),
 		Attributes: map[string]string{
 			"priority":  "high",
 			"category":  "urgent",
 			"timestamp": time.Now().Format(time.RFC3339),
 		},
-		Size:       100,
-		Timestamp:  time.Now(),
-		LineageID:  "lineage_002",
+		Size:      100,
+		Timestamp: time.Now(),
+		LineageID: "lineage_002",
 	}
-	
+
 	// 使用高级路由处理器
 	advancedRouter, _ := manager.GetProcessor("advanced_route_processor")
 	ctx := processor.ProcessContext{
 		Properties: map[string]string{
-			"high_value.attribute":      "priority",
+			"high_value.attribute":       "priority",
 			"high_value.attribute_value": "high",
 			"default.relationship":       "low_priority",
 		},
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := advancedRouter.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("路由处理失败: %v", err)
@@ -170,7 +167,7 @@ func exampleRouting(manager *processor.ProcessorManager) {
 // exampleSemanticExtraction 语义提取示例
 func exampleSemanticExtraction(manager *processor.ProcessorManager) {
 	fmt.Println("\n--- 语义提取示例 ---")
-	
+
 	// 创建包含多种信息的测试数据
 	testText := `
 	用户信息：张三，身份证号：110101199001011234，手机号：13812345678
@@ -178,16 +175,16 @@ func exampleSemanticExtraction(manager *processor.ProcessorManager) {
 	交易时间：2024-01-15 14:30:25，交易金额：¥1234.56
 	IP地址：192.168.1.100，网址：https://www.example.com
 	`
-	
-	flowFile := &processor.FlowFile{
-		ID:         "test_flowfile_003",
+
+	flowFile := &flowfile.FlowFile{
+		UUID:       "test_flowfile_003",
 		Content:    []byte(testText),
 		Attributes: make(map[string]string),
 		Size:       int64(len(testText)),
 		Timestamp:  time.Now(),
 		LineageID:  "lineage_003",
 	}
-	
+
 	// 使用文本语义提取器
 	textExtractor, _ := manager.GetProcessor("text_semantic_extractor")
 	ctx := processor.ProcessContext{
@@ -197,7 +194,7 @@ func exampleSemanticExtraction(manager *processor.ProcessorManager) {
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := textExtractor.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("语义提取失败: %v", err)
@@ -215,20 +212,20 @@ func exampleSemanticExtraction(manager *processor.ProcessorManager) {
 // exampleErrorHandling 错误处理示例
 func exampleErrorHandling(manager *processor.ProcessorManager) {
 	fmt.Println("\n--- 错误处理示例 ---")
-	
+
 	// 创建包含错误信息的测试数据
-	flowFile := &processor.FlowFile{
-		ID:    "test_flowfile_004",
+	flowFile := &flowfile.FlowFile{
+		UUID:    "test_flowfile_004",
 		Content: []byte(`{"data": "network_error", "message": "Connection timeout"}`),
 		Attributes: map[string]string{
 			"error.message": "Network connection timeout",
 			"retry.count":   "2",
 		},
-		Size:       50,
-		Timestamp:  time.Now(),
-		LineageID:  "lineage_004",
+		Size:      50,
+		Timestamp: time.Now(),
+		LineageID: "lineage_004",
 	}
-	
+
 	// 使用错误处理处理器
 	errorHandler, _ := manager.GetProcessor("error_handling_processor")
 	ctx := processor.ProcessContext{
@@ -238,7 +235,7 @@ func exampleErrorHandling(manager *processor.ProcessorManager) {
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := errorHandler.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("错误处理失败: %v", err)
@@ -252,17 +249,17 @@ func exampleErrorHandling(manager *processor.ProcessorManager) {
 // exampleScriptProcessing 脚本处理示例
 func exampleScriptProcessing(manager *processor.ProcessorManager) {
 	fmt.Println("\n--- 脚本处理示例 ---")
-	
+
 	// 创建测试数据
-	flowFile := &processor.FlowFile{
-		ID:         "test_flowfile_005",
+	flowFile := &flowfile.FlowFile{
+		UUID:       "test_flowfile_005",
 		Content:    []byte(`{"name": "old_value", "status": "pending"}`),
 		Attributes: make(map[string]string),
 		Size:       30,
 		Timestamp:  time.Now(),
 		LineageID:  "lineage_005",
 	}
-	
+
 	// 使用脚本处理器
 	scriptProcessor, _ := manager.GetProcessor("script_processor")
 	ctx := processor.ProcessContext{
@@ -280,7 +277,7 @@ func exampleScriptProcessing(manager *processor.ProcessorManager) {
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := scriptProcessor.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("脚本处理失败: %v", err)
@@ -298,33 +295,33 @@ func exampleScriptProcessing(manager *processor.ProcessorManager) {
 // ExampleUserProfileEnrichment 用户画像丰富示例
 func ExampleUserProfileEnrichment() {
 	fmt.Println("\n=== 用户画像丰富示例 ===")
-	
+
 	// 创建用户画像丰富处理器
 	enrichmentProcessor := &UserProfileEnrichmentProcessor{
 		AbstractProcessor: &processor.AbstractProcessor{},
 	}
-	
+
 	// 初始化处理器
-	enrichmentProcessor.Initialize(context.Background())
-	
+	enrichmentProcessor.Initialize(processor.ProcessContext{})
+
 	// 创建测试数据
 	userData := map[string]interface{}{
 		"user_id": "12345",
 		"name":    "张三",
 		"email":   "zhangsan@example.com",
 	}
-	
+
 	jsonData, _ := json.Marshal(userData)
-	
-	flowFile := &processor.FlowFile{
-		ID:         "user_profile_001",
+
+	flowFile := &flowfile.FlowFile{
+		UUID:       "user_profile_001",
 		Content:    jsonData,
 		Attributes: map[string]string{"user.id": "12345"},
 		Size:       int64(len(jsonData)),
 		Timestamp:  time.Now(),
 		LineageID:  "user_lineage_001",
 	}
-	
+
 	// 处理数据
 	ctx := processor.ProcessContext{
 		Properties: map[string]string{
@@ -333,7 +330,7 @@ func ExampleUserProfileEnrichment() {
 		Session: &processor.ProcessSession{},
 		State:   make(map[string]interface{}),
 	}
-	
+
 	result, err := enrichmentProcessor.Process(ctx, flowFile)
 	if err != nil {
 		log.Printf("用户画像丰富失败: %v", err)
@@ -354,47 +351,47 @@ type UserProfileEnrichmentProcessor struct {
 }
 
 // Initialize 初始化处理器
-func (upep *UserProfileEnrichmentProcessor) Initialize(ctx context.Context) error {
+func (upep *UserProfileEnrichmentProcessor) Initialize(ctx processor.ProcessContext) error {
 	if err := upep.AbstractProcessor.Initialize(ctx); err != nil {
 		return err
 	}
-	
+
 	// 添加关系
 	upep.AddRelationship("enriched", "用户画像丰富成功")
 	upep.AddRelationship("error", "用户画像丰富失败")
-	
+
 	// 添加属性描述符
 	upep.AddPropertyDescriptor("api.endpoint", "用户画像API端点", true)
 	upep.AddPropertyDescriptor("api.timeout", "API超时时间", false)
-	
+
 	return nil
 }
 
 // Process 处理数据
-func (upep *UserProfileEnrichmentProcessor) Process(ctx processor.ProcessContext, flowFile *processor.FlowFile) (*processor.FlowFile, error) {
+func (upep *UserProfileEnrichmentProcessor) Process(ctx processor.ProcessContext, flowFile *flowfile.FlowFile) (*flowfile.FlowFile, error) {
 	upep.SetState(processor.StateRunning)
 	defer upep.SetState(processor.StateReady)
-	
+
 	// 读取用户ID
 	userID := flowFile.Attributes["user.id"]
 	if userID == "" {
 		return nil, fmt.Errorf("user.id attribute is required")
 	}
-	
+
 	// 模拟调用外部API获取用户详细信息
 	profile := upep.fetchUserProfile(userID)
-	
+
 	// 将用户信息写入FlowFile
 	profileData, _ := json.Marshal(profile)
 	flowFile.Content = profileData
 	flowFile.Size = int64(len(profileData))
-	
+
 	// 添加用户画像属性
 	flowFile.Attributes["profile.age"] = fmt.Sprintf("%d", profile.Age)
 	flowFile.Attributes["profile.interests"] = strings.Join(profile.Interests, ",")
 	flowFile.Attributes["profile.location"] = profile.Location
 	flowFile.Attributes["profile.vip_level"] = fmt.Sprintf("%d", profile.VIPLevel)
-	
+
 	return flowFile, nil
 }
 
@@ -421,19 +418,3 @@ type UserProfile struct {
 	Interests []string `json:"interests"`
 	VIPLevel  int      `json:"vip_level"`
 }
-
-// strings.Join 字符串连接函数
-func strings.Join(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	if len(strs) == 1 {
-		return strs[0]
-	}
-	
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	return result
-} 

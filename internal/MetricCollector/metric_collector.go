@@ -1,6 +1,7 @@
 package MetricCollector
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -34,6 +35,12 @@ type MetricCollector interface {
 
 	// ListMetrics 列出所有指标
 	ListMetrics() []string
+	Start()
+	Stop()
+	RecordMetric(s string, milliseconds int64)
+	RecordEngineStop()
+	RecordProcessorScheduled(id string)
+	RecordEngineStart()
 }
 
 // MetricType 指标类型枚举
@@ -79,9 +86,6 @@ type Metric interface {
 // Gauge 瞬时值指标接口
 type Gauge interface {
 	Metric
-
-	// GetValue 获取当前值
-	GetValue() float64
 
 	// Update 更新值
 	Update(value float64)
@@ -185,28 +189,6 @@ type Meter interface {
 	GetFifteenMinuteRate() float64
 }
 
-// MetricsSnapshot 指标快照
-type MetricsSnapshot struct {
-	Timestamp  time.Time            `json:"timestamp"`
-	Gauges     map[string]Gauge     `json:"gauges"`
-	Counters   map[string]Counter   `json:"counters"`
-	Histograms map[string]Histogram `json:"histograms"`
-	Timers     map[string]Timer     `json:"timers"`
-	Meters     map[string]Meter     `json:"meters"`
-}
-
-// NewMetricsSnapshot 创建新的指标快照
-func NewMetricsSnapshot() *MetricsSnapshot {
-	return &MetricsSnapshot{
-		Timestamp:  time.Now(),
-		Gauges:     make(map[string]Gauge),
-		Counters:   make(map[string]Counter),
-		Histograms: make(map[string]Histogram),
-		Timers:     make(map[string]Timer),
-		Meters:     make(map[string]Meter),
-	}
-}
-
 // StandardMetricCollector 标准指标收集器实现
 type StandardMetricCollector struct {
 	metrics map[string]Metric
@@ -305,15 +287,24 @@ func (smc *StandardMetricCollector) GetMetricsSnapshot() *MetricsSnapshot {
 	for name, metric := range smc.metrics {
 		switch m := metric.(type) {
 		case Gauge:
-			snapshot.Gauges[name] = m
+			snapshot.Gauges[name] = m.GetValue().(float64)
 		case Counter:
-			snapshot.Counters[name] = m
+			snapshot.Counters[name] = m.GetValue().(int64)
 		case Histogram:
-			snapshot.Histograms[name] = m
+			var t HistogramData
+			b, _ := json.Marshal(m)
+			json.Unmarshal(b, &t)
+			snapshot.Histograms[name] = t
 		case Timer:
-			snapshot.Timers[name] = m
+			var t TimerData
+			b, _ := json.Marshal(m)
+			json.Unmarshal(b, &t)
+			snapshot.Timers[name] = t
 		case Meter:
-			snapshot.Meters[name] = m
+			var t MeterData
+			b, _ := json.Marshal(m)
+			json.Unmarshal(b, &t)
+			snapshot.Meters[name] = t
 		}
 	}
 
@@ -344,6 +335,29 @@ func (smc *StandardMetricCollector) RemoveMetric(name string) error {
 
 	delete(smc.metrics, name)
 	return nil
+}
+func (smc *StandardMetricCollector) Start() {
+	panic("1")
+}
+func (smc *StandardMetricCollector) Stop() {
+	panic("1")
+
+}
+func (smc *StandardMetricCollector) RecordMetric(s string, milliseconds int64) {
+	panic("1")
+
+}
+func (smc *StandardMetricCollector) RecordEngineStop() {
+	panic("1")
+
+}
+func (smc *StandardMetricCollector) RecordProcessorScheduled(id string) {
+	panic("1")
+
+}
+func (smc *StandardMetricCollector) RecordEngineStart() {
+	panic("1")
+
 }
 
 // ListMetrics 列出所有指标
@@ -393,7 +407,7 @@ func (sg *StandardGauge) GetScope() MetricScope {
 }
 
 // GetValue 获取当前值
-func (sg *StandardGauge) GetValue() float64 {
+func (sg *StandardGauge) GetValue() interface{} {
 	sg.mutex.RLock()
 	defer sg.mutex.RUnlock()
 

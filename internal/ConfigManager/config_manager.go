@@ -4,11 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/crazy/edge-stream/internal/ConfigManager/ConfigChangeNotifier"
-	"github.com/crazy/edge-stream/internal/ConfigManager/ConfigLoader"
-
-	"github.com/crazy/edge-stream/internal/ConfigManager/SensitivePropertyEncryptor"
 )
 
 // ConfigManager 配置管理器接口
@@ -26,7 +21,7 @@ type ConfigManager interface {
 	PersistConfiguration() error
 
 	// GetSensitivePropertyProvider 获取敏感属性提供者
-	GetSensitivePropertyProvider() SensitivePropertyEncryptor.SensitivePropertyProvider
+	GetSensitivePropertyProvider() SensitivePropertyProvider
 
 	// RegisterValidator 注册配置验证器
 	RegisterValidator(validator ConfigValidator)
@@ -35,7 +30,7 @@ type ConfigManager interface {
 	ValidateConfiguration() (*ValidationResult, error)
 
 	// AddConfigurationChangeListener 添加配置变更监听器
-	AddConfigurationChangeListener(listener ConfigChangeNotifier.ConfigurationChangeListener)
+	AddConfigurationChangeListener(listener ConfigurationChangeListener)
 
 	// ReloadConfiguration 重载配置
 	ReloadConfiguration() error
@@ -116,9 +111,9 @@ func (cm *StandardConfigMap) Remove(key string) {
 // StandardConfigManager 标准配置管理器实现
 type StandardConfigManager struct {
 	configMap            ConfigMap
-	sensitiveProvider    SensitivePropertyEncryptor.SensitivePropertyProvider
-	configFileManager    *ConfigLoader.ConfigFileManager
-	changeManager        *ConfigChangeNotifier.ConfigurationChangeManager
+	sensitiveProvider    SensitivePropertyProvider
+	configFileManager    *ConfigFileManager
+	changeManager        *ConfigurationChangeManager
 	validators           []ConfigValidator
 	validationStrategy   ValidationStrategy
 	configHistoryManager *ConfigHistoryManager
@@ -129,8 +124,8 @@ type StandardConfigManager struct {
 func NewStandardConfigManager() *StandardConfigManager {
 	return &StandardConfigManager{
 		configMap:            NewStandardConfigMap(),
-		configFileManager:    ConfigLoader.NewConfigFileManager(),
-		changeManager:        ConfigChangeNotifier.NewConfigurationChangeManager(),
+		configFileManager:    NewConfigFileManager(),
+		changeManager:        NewConfigurationChangeManager(),
 		validators:           make([]ConfigValidator, 0),
 		validationStrategy:   ValidationStrategyStrict,
 		configHistoryManager: NewConfigHistoryManager(),
@@ -233,7 +228,7 @@ func (cm *StandardConfigManager) PersistConfiguration() error {
 }
 
 // GetSensitivePropertyProvider 获取敏感属性提供者
-func (cm *StandardConfigManager) GetSensitivePropertyProvider() SensitivePropertyEncryptor.SensitivePropertyProvider {
+func (cm *StandardConfigManager) GetSensitivePropertyProvider() SensitivePropertyProvider {
 	return cm.sensitiveProvider
 }
 
@@ -264,7 +259,7 @@ func (cm *StandardConfigManager) ValidateConfiguration() (*ValidationResult, err
 }
 
 // AddConfigurationChangeListener 添加配置变更监听器
-func (cm *StandardConfigManager) AddConfigurationChangeListener(listener ConfigChangeNotifier.ConfigurationChangeListener) {
+func (cm *StandardConfigManager) AddConfigurationChangeListener(listener ConfigurationChangeListener) {
 	cm.changeManager.AddConfigurationChangeListener(listener)
 }
 
@@ -278,7 +273,7 @@ func (cm *StandardConfigManager) ReloadConfiguration() error {
 }
 
 // SetSensitivePropertyProvider 设置敏感属性提供者
-func (cm *StandardConfigManager) SetSensitivePropertyProvider(provider SensitivePropertyEncryptor.SensitivePropertyProvider) {
+func (cm *StandardConfigManager) SetSensitivePropertyProvider(provider SensitivePropertyProvider) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 

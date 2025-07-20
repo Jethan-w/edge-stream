@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // WindowManager 窗口管理器接口
@@ -53,10 +55,10 @@ type Window interface {
 	GetWindowType() WindowType
 
 	// AddFlowFile 添加 FlowFile
-	AddFlowFile(flowFile *FlowFile) error
+	AddFlowFile(flowFile *flowfile.FlowFile) error
 
 	// GetFlowFiles 获取所有 FlowFile
-	GetFlowFiles() []*FlowFile
+	GetFlowFiles() []*flowfile.FlowFile
 
 	// IsExpired 检查是否过期
 	IsExpired(currentTime int64) bool
@@ -78,7 +80,7 @@ type Window interface {
 type AbstractWindow struct {
 	id               string
 	creationTime     int64
-	flowFiles        []*FlowFile
+	flowFiles        []*flowfile.FlowFile
 	windowType       WindowType
 	mu               sync.RWMutex
 	triggerThreshold int
@@ -90,7 +92,7 @@ func NewAbstractWindow(windowType WindowType, stateManager WindowStateManager) *
 	return &AbstractWindow{
 		id:               generateWindowID(),
 		creationTime:     time.Now().UnixMilli(),
-		flowFiles:        make([]*FlowFile, 0),
+		flowFiles:        make([]*flowfile.FlowFile, 0),
 		windowType:       windowType,
 		triggerThreshold: 100, // 默认触发阈值
 		stateManager:     stateManager,
@@ -119,7 +121,7 @@ func (aw *AbstractWindow) GetWindowType() WindowType {
 }
 
 // AddFlowFile 添加 FlowFile
-func (aw *AbstractWindow) AddFlowFile(flowFile *FlowFile) error {
+func (aw *AbstractWindow) AddFlowFile(flowFile *flowfile.FlowFile) error {
 	aw.mu.Lock()
 	defer aw.mu.Unlock()
 
@@ -139,11 +141,11 @@ func (aw *AbstractWindow) AddFlowFile(flowFile *FlowFile) error {
 }
 
 // GetFlowFiles 获取所有 FlowFile
-func (aw *AbstractWindow) GetFlowFiles() []*FlowFile {
+func (aw *AbstractWindow) GetFlowFiles() []*flowfile.FlowFile {
 	aw.mu.RLock()
 	defer aw.mu.RUnlock()
 
-	result := make([]*FlowFile, len(aw.flowFiles))
+	result := make([]*flowfile.FlowFile, len(aw.flowFiles))
 	copy(result, aw.flowFiles)
 	return result
 }
@@ -428,45 +430,6 @@ func (swm *StandardWindowManager) cleanupExpiredWindows() {
 		}
 		delete(swm.activeWindows, id)
 	}
-}
-
-// FlowFile 数据流文件（模拟实现）
-type FlowFile struct {
-	ID         string            `json:"id"`
-	Content    []byte            `json:"content"`
-	Attributes map[string]string `json:"attributes"`
-	Size       int64             `json:"size"`
-	Timestamp  int64             `json:"timestamp"`
-}
-
-// NewFlowFile 创建新的 FlowFile
-func NewFlowFile(id string, content []byte, attributes map[string]string) *FlowFile {
-	if attributes == nil {
-		attributes = make(map[string]string)
-	}
-
-	return &FlowFile{
-		ID:         id,
-		Content:    content,
-		Attributes: attributes,
-		Size:       int64(len(content)),
-		Timestamp:  time.Now().UnixMilli(),
-	}
-}
-
-// GetContent 获取内容
-func (ff *FlowFile) GetContent() []byte {
-	return ff.Content
-}
-
-// GetAttribute 获取属性
-func (ff *FlowFile) GetAttribute(key string) string {
-	return ff.Attributes[key]
-}
-
-// SetAttribute 设置属性
-func (ff *FlowFile) SetAttribute(key, value string) {
-	ff.Attributes[key] = value
 }
 
 // WindowStateManager 窗口状态管理器接口

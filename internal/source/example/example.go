@@ -6,11 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/edge-stream/internal/source"
-	"github.com/edge-stream/internal/source/ConfigManager"
-	"github.com/edge-stream/internal/source/MultiModalReceiv
-	"github.com/edge-stream/internal/source/ProtocolAdapter"
-r
+	"github.com/crazy/edge-stream/internal/source"
 )
 
 // ExampleSourceUsage 展示Source模块的基本使用
@@ -22,7 +18,7 @@ func ExampleSourceUsage() {
 
 	// 1. 创建多模态数据接收器
 	fmt.Println("\n1. 创建多模态数据接收器")
-	multiModalReceiver := multimodalreceiver.NewMultiModalReceiver()
+	multiModalReceiver := source.NewMultiModalReceiver()
 
 	// 初始化接收器
 	if err := multiModalReceiver.Initialize(ctx); err != nil {
@@ -46,7 +42,7 @@ func ExampleSourceUsage() {
 
 	// 2. 创建安全数据接收器
 	fmt.Println("\n2. 创建安全数据接收器")
-	secureReceiver := securereceiver.NewSecureReceiver()
+	secureReceiver := source.NewSecureReceiver()
 
 	// 配置TLS
 	tlsContext := &source.TLSContext{
@@ -93,7 +89,7 @@ func ExampleSourceUsage() {
 }
 
 // exampleReceiveData 示例接收数据
-func exampleReceiveData(receiver *multimodalreceiver.MultiModalReceiver) {
+func exampleReceiveData(receiver *source.MultiModalReceiver) {
 	// 接收视频数据
 	videoPacket := &source.VideoPacket{
 		FrameData: []byte("video frame data"),
@@ -154,7 +150,7 @@ func exampleReceiveData(receiver *multimodalreceiver.MultiModalReceiver) {
 // exampleConfigManagement 配置管理示例
 func exampleConfigManagement() {
 	// 创建配置管理器
-	configManager := configmanager.NewConfigManager()
+	configManager := source.NewConfigManager()
 
 	// 初始化配置管理器
 	ctx := context.Background()
@@ -217,7 +213,7 @@ func exampleConfigManagement() {
 // exampleProtocolAdapters 协议适配器示例
 func exampleProtocolAdapters() {
 	// 创建协议管理器
-	protocolManager := protocoladapter.NewProtocolManager()
+	protocolManager := source.NewProtocolManager()
 
 	// 初始化协议管理器
 	ctx := context.Background()
@@ -297,7 +293,7 @@ func exampleSourceManager() {
 	sourceManager := source.NewSourceManager()
 
 	// 创建多模态数据接收器
-	multiModalReceiver := multimodalreceiver.NewMultiModalReceiver()
+	multiModalReceiver := source.NewMultiModalReceiver()
 
 	// 注册数据源
 	if err := sourceManager.RegisterSource("multi_modal", multiModalReceiver); err != nil {
@@ -305,7 +301,7 @@ func exampleSourceManager() {
 	}
 
 	// 创建安全数据接收器
-	secureReceiver := securereceiver.NewSecureReceiver()
+	secureReceiver := source.NewSecureReceiver()
 
 	// 注册数据源
 	if err := sourceManager.RegisterSource("secure", secureReceiver); err != nil {
@@ -346,7 +342,7 @@ func ExampleCustomProtocol() {
 	fmt.Println("\n=== 自定义协议示例 ===")
 
 	// 创建协议管理器
-	protocolManager := protocoladapter.NewProtocolManager()
+	protocolManager := source.NewProtocolManager()
 
 	// 注册自定义协议
 	customExtension := &CustomProtocolExtension{}
@@ -386,29 +382,27 @@ func (cpe *CustomProtocolExtension) GetName() string {
 }
 
 // Register 注册协议
-func (cpe *CustomProtocolExtension) Register(registry *protocoladapter.CustomProtocolRegistry) {
+func (cpe *CustomProtocolExtension) Register(registry *source.CustomProtocolRegistry) {
 	registry.RegisterProtocol(cpe.GetName(), cpe.CreateAdapter)
 }
 
 // CreateAdapter 创建适配器
-func (cpe *CustomProtocolExtension) CreateAdapter() protocoladapter.ProtocolAdapter {
+func (cpe *CustomProtocolExtension) CreateAdapter() source.ProtocolAdapter {
 	return &CustomProtocolAdapter{
-		AbstractProtocolAdapter: protocoladapter.NewAbstractProtocolAdapter("custom-protocol"),
+		source.NewAbstractProtocolAdapter("custom-protocol"),
 	}
 }
 
 // CustomProtocolAdapter 自定义协议适配器
 type CustomProtocolAdapter struct {
-	*protocoladapter.AbstractProtocolAdapter
+	source.ProtocolAdapter
 }
 
 // Initialize 初始化自定义适配器
 func (cpa *CustomProtocolAdapter) Initialize(config map[string]string) error {
-	if err := cpa.AbstractProtocolAdapter.Initialize(config); err != nil {
+	if err := cpa.ProtocolAdapter.Initialize(config); err != nil {
 		return err
 	}
-
-	cpa.UpdateStatus(protocoladapter.AdapterStateRunning, "自定义适配器已启动")
 	return nil
 }
 
@@ -428,14 +422,14 @@ func (cpa *CustomProtocolAdapter) Receive() (source.DataPacket, error) {
 	packet.Metadata["protocol"] = "custom-protocol"
 	packet.Metadata["source"] = "custom_adapter"
 
-	cpa.LogAdapterActivity("接收到自定义数据")
+	// cpa.LogAdapterActivity("接收到自定义数据")
 
 	return packet, nil
 }
 
 // Close 关闭适配器
 func (cpa *CustomProtocolAdapter) Close() error {
-	cpa.UpdateStatus(protocoladapter.AdapterStateStopped, "自定义适配器已停止")
+	// cpa.UpdateStatus(source.AdapterStateStopped, "自定义适配器已停止")
 	return nil
 }
 
@@ -444,13 +438,13 @@ func ExampleConfigurationListener() {
 	fmt.Println("\n=== 配置变更监听器示例 ===")
 
 	// 创建配置管理器
-	configManager := configmanager.NewConfigManager()
+	configManager := source.NewConfigManager()
 
 	// 创建配置变更监听器
 	listener := &ExampleConfigChangeListener{}
 
 	// 添加监听器
-	configManager.configNotifier.AddListener("example_source", listener)
+	configManager.ConfigNotifier.AddListener("example_source", listener)
 
 	// 加载配置
 	configData := map[string]string{
@@ -480,7 +474,7 @@ func ExampleConfigurationListener() {
 type ExampleConfigChangeListener struct{}
 
 // OnConfigChange 配置变更回调
-func (eccl *ExampleConfigChangeListener) OnConfigChange(event *configmanager.ConfigChangeEvent) {
+func (eccl *ExampleConfigChangeListener) OnConfigChange(event *source.ConfigChangeEvent) {
 	fmt.Printf("配置变更事件: 数据源=%s, 类型=%s, 时间=%s\n",
 		event.SourceID, event.Type.String(), event.Time.Format(time.RFC3339))
 

@@ -4,43 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/edge-stream/internal/flowfile"
-	"github.com/edge-stream/internal/sink/TargetAdapter"
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
-// NewFileSystemOutputAdapter 创建文件系统输出适配器
-func NewFileSystemOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdapter {
-	configMap := make(map[string]string)
-	configMap["id"] = config.ID
-	configMap["name"] = config.ID
-
-	// 将配置转换为 map
-	for key, value := range config.Properties {
-		configMap[key] = value
-	}
-
-	return TargetAdapter.NewFileSystemOutputAdapter(configMap)
-}
-
-// NewDatabaseOutputAdapter 创建数据库输出适配器
-func NewDatabaseOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdapter {
-	configMap := make(map[string]string)
-	configMap["id"] = config.ID
-	configMap["name"] = config.ID
-
-	// 将配置转换为 map
-	for key, value := range config.Properties {
-		configMap[key] = value
-	}
-
-	return TargetAdapter.NewDatabaseOutputAdapter(configMap)
-}
-
 // NewMessageQueueOutputAdapter 创建消息队列输出适配器
-func NewMessageQueueOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdapter {
+func NewMessageQueueOutputAdapter(config OutputTargetConfig) TargetAdapter {
 	// 创建消息队列适配器
 	adapter := &MessageQueueOutputAdapter{
-		AbstractTargetAdapter: TargetAdapter.NewAbstractTargetAdapter(
+		AbstractTargetAdapter: NewAbstractTargetAdapter(
 			config.ID,
 			config.ID,
 			"MessageQueue",
@@ -59,10 +30,10 @@ func NewMessageQueueOutputAdapter(config OutputTargetConfig) TargetAdapter.Targe
 }
 
 // NewSearchEngineOutputAdapter 创建搜索引擎输出适配器
-func NewSearchEngineOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdapter {
+func NewSearchEngineOutputAdapter(config OutputTargetConfig) TargetAdapter {
 	// 创建搜索引擎适配器
 	adapter := &SearchEngineOutputAdapter{
-		AbstractTargetAdapter: TargetAdapter.NewAbstractTargetAdapter(
+		AbstractTargetAdapter: NewAbstractTargetAdapter(
 			config.ID,
 			config.ID,
 			"SearchEngine",
@@ -79,10 +50,10 @@ func NewSearchEngineOutputAdapter(config OutputTargetConfig) TargetAdapter.Targe
 }
 
 // NewRESTAPIOutputAdapter 创建 REST API 输出适配器
-func NewRESTAPIOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdapter {
+func NewRESTAPIOutputAdapter(config OutputTargetConfig) TargetAdapter {
 	// 创建 REST API 适配器
 	adapter := &RESTAPIOutputAdapter{
-		AbstractTargetAdapter: TargetAdapter.NewAbstractTargetAdapter(
+		AbstractTargetAdapter: NewAbstractTargetAdapter(
 			config.ID,
 			config.ID,
 			"RESTAPI",
@@ -102,7 +73,7 @@ func NewRESTAPIOutputAdapter(config OutputTargetConfig) TargetAdapter.TargetAdap
 
 // MessageQueueOutputAdapter 消息队列输出适配器
 type MessageQueueOutputAdapter struct {
-	*TargetAdapter.AbstractTargetAdapter
+	*AbstractTargetAdapter
 
 	// 消息队列相关
 	brokerURL   string
@@ -113,6 +84,31 @@ type MessageQueueOutputAdapter struct {
 
 	// 连接相关
 	connection interface{} // 实际的连接对象
+}
+
+func (a *MessageQueueOutputAdapter) Initialize(config map[string]string) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *MessageQueueOutputAdapter) Write(flowFile *flowfile.FlowFile) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *MessageQueueOutputAdapter) Close() error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *MessageQueueOutputAdapter) GetMetadata() *TargetAdapterMetadata {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *MessageQueueOutputAdapter) IsHealthy() bool {
+	// TODO implement me
+	panic("implement me")
 }
 
 // ApplyConfig 应用配置
@@ -135,29 +131,26 @@ func (a *MessageQueueOutputAdapter) ApplyConfig(config map[string]string) {
 
 	if batchSize, exists := config["batch_size"]; exists {
 		// 解析批量大小
-		if size, err := fmt.Sscanf(batchSize, "%d", &a.batchSize); err != nil {
+		if _, err := fmt.Sscanf(batchSize, "%d", &a.batchSize); err != nil {
 			a.batchSize = 100 // 默认值
 		}
 	}
 }
 
 // doWrite 实现具体的消息队列写入逻辑
-func (a *MessageQueueOutputAdapter) doWrite(flowFile interface{}) error {
+func (a *MessageQueueOutputAdapter) doWrite(flowFile *flowfile.FlowFile) error {
 	// 验证 FlowFile
-	if err := a.ValidateFlowFile(flowFile); err != nil {
+	if err := flowFile.ValidateFlowFile(); err != nil {
 		return err
 	}
 
-	ff := flowFile.(*flowfile.FlowFile)
+	ff := flowFile
 
 	// 获取内容
-	content, err := ff.GetContent()
-	if err != nil {
-		return fmt.Errorf("failed to get flowfile content: %w", err)
-	}
+	content := ff.Content
 
 	// 发送消息到队列
-	return a.sendMessage(content, ff.GetAttributes())
+	return a.sendMessage(content, ff.Attributes)
 }
 
 // sendMessage 发送消息
@@ -176,7 +169,7 @@ func (a *MessageQueueOutputAdapter) performHealthCheck() bool {
 
 // SearchEngineOutputAdapter 搜索引擎输出适配器
 type SearchEngineOutputAdapter struct {
-	*TargetAdapter.AbstractTargetAdapter
+	*AbstractTargetAdapter
 
 	// 搜索引擎相关
 	serverURL    string
@@ -185,6 +178,31 @@ type SearchEngineOutputAdapter struct {
 
 	// 连接相关
 	client interface{} // 实际的客户端对象
+}
+
+func (a *SearchEngineOutputAdapter) Initialize(config map[string]string) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *SearchEngineOutputAdapter) Write(flowFile *flowfile.FlowFile) error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *SearchEngineOutputAdapter) Close() error {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *SearchEngineOutputAdapter) GetMetadata() *TargetAdapterMetadata {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (a *SearchEngineOutputAdapter) IsHealthy() bool {
+	// TODO implement me
+	panic("implement me")
 }
 
 // ApplyConfig 应用配置
@@ -203,22 +221,19 @@ func (a *SearchEngineOutputAdapter) ApplyConfig(config map[string]string) {
 }
 
 // doWrite 实现具体的搜索引擎写入逻辑
-func (a *SearchEngineOutputAdapter) doWrite(flowFile interface{}) error {
+func (a *SearchEngineOutputAdapter) doWrite(flowFile *flowfile.FlowFile) error {
 	// 验证 FlowFile
 	if err := a.ValidateFlowFile(flowFile); err != nil {
 		return err
 	}
 
-	ff := flowFile.(*flowfile.FlowFile)
+	ff := flowFile
 
 	// 获取内容
-	content, err := ff.GetContent()
-	if err != nil {
-		return fmt.Errorf("failed to get flowfile content: %w", err)
-	}
+	content := ff.Content
 
 	// 索引文档
-	return a.indexDocument(content, ff.GetAttributes())
+	return a.indexDocument(content, ff.Attributes)
 }
 
 // indexDocument 索引文档
@@ -237,7 +252,7 @@ func (a *SearchEngineOutputAdapter) performHealthCheck() bool {
 
 // RESTAPIOutputAdapter REST API 输出适配器
 type RESTAPIOutputAdapter struct {
-	*TargetAdapter.AbstractTargetAdapter
+	*AbstractTargetAdapter
 
 	// REST API 相关
 	baseURL     string
@@ -273,29 +288,26 @@ func (a *RESTAPIOutputAdapter) ApplyConfig(config map[string]string) {
 	}
 
 	if timeout, exists := config["timeout"]; exists {
-		if t, err := fmt.Sscanf(timeout, "%d", &a.timeout); err != nil {
+		if _, err := fmt.Sscanf(timeout, "%d", &a.timeout); err != nil {
 			a.timeout = 30 // 默认30秒
 		}
 	}
 }
 
 // doWrite 实现具体的 REST API 写入逻辑
-func (a *RESTAPIOutputAdapter) doWrite(flowFile interface{}) error {
+func (a *RESTAPIOutputAdapter) doWrite(flowFile *flowfile.FlowFile) error {
 	// 验证 FlowFile
 	if err := a.ValidateFlowFile(flowFile); err != nil {
 		return err
 	}
 
-	ff := flowFile.(*flowfile.FlowFile)
+	ff := flowFile
 
 	// 获取内容
-	content, err := ff.GetContent()
-	if err != nil {
-		return fmt.Errorf("failed to get flowfile content: %w", err)
-	}
+	content := ff.Content
 
 	// 发送 HTTP 请求
-	return a.sendHTTPRequest(content, ff.GetAttributes())
+	return a.sendHTTPRequest(content, ff.Attributes)
 }
 
 // sendHTTPRequest 发送 HTTP 请求

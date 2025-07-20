@@ -7,10 +7,6 @@ import (
 	"time"
 
 	"github.com/crazy/edge-stream/internal/ConfigManager"
-	"github.com/crazy/edge-stream/internal/ConfigManager/ConfigChangeNotifier"
-	"github.com/crazy/edge-stream/internal/ConfigManager/EnvironmentVariableInjector"
-
-	"github.com/crazy/edge-stream/internal/ConfigManager/SensitivePropertyEncryptor"
 )
 
 // ExampleUsage 使用示例
@@ -19,14 +15,14 @@ func ExampleUsage() {
 	configManager := ConfigManager.NewStandardConfigManager()
 
 	// 创建密钥管理器
-	keyManager := SensitivePropertyEncryptor.NewKeyStoreManager("keystore.p12", "nifi-key", "nifi-secret")
+	keyManager := ConfigManager.NewKeyStoreManager("keystore.p12", "nifi-key", "nifi-secret")
 	secretKey, err := keyManager.GenerateOrLoadKey()
 	if err != nil {
 		log.Fatalf("生成密钥失败: %v", err)
 	}
 
 	// 创建敏感属性提供者
-	sensitiveProvider := SensitivePropertyEncryptor.NewAESSensitivePropertyProvider(secretKey)
+	sensitiveProvider := ConfigManager.NewAESSensitivePropertyProvider(secretKey)
 	configManager.SetSensitivePropertyProvider(sensitiveProvider)
 
 	// 注册配置验证器
@@ -82,7 +78,7 @@ func ExampleUsage() {
 type ExampleConfigChangeListener struct{}
 
 // OnConfigurationChanged 配置变更回调
-func (ecl *ExampleConfigChangeListener) OnConfigurationChanged(event *ConfigChangeNotifier.ConfigurationChangeEvent) {
+func (ecl *ExampleConfigChangeListener) OnConfigurationChanged(event *ConfigManager.ConfigurationChangeEvent) {
 	fmt.Printf("配置变更通知: 键=%s, 值=%s, 时间=%s\n",
 		event.Key, event.Value, event.Timestamp.Format("2006-01-02 15:04:05"))
 }
@@ -93,10 +89,10 @@ func ExampleDynamicConfiguration() {
 	ConfigManager.NewStandardConfigManager()
 
 	// 创建环境变量注入器
-	EnvironmentVariableInjector.NewEnvironmentInjector()
+	ConfigManager.NewEnvironmentInjector()
 
 	// 创建配置值处理器
-	valueProcessor := EnvironmentVariableInjector.NewConfigValueProcessor()
+	valueProcessor := ConfigManager.NewConfigValueProcessor()
 
 	// 模拟环境变量
 	os.Setenv("NIFI_DB_HOST", "localhost")
@@ -199,7 +195,7 @@ func ExampleHotReload() {
 	configManager := ConfigManager.NewStandardConfigManager()
 
 	// 创建热重载管理器
-	hotReloadManager := ConfigChangeNotifier.NewHotReloadManager(configManager)
+	hotReloadManager := ConfigManager.NewHotReloadManager(configManager)
 
 	// 模拟处理器
 	processor := &ExampleProcessor{}
@@ -241,10 +237,10 @@ func (ep *ExampleProcessor) GracefulRestart() error {
 // ExampleNotificationManager 通知管理器示例
 func ExampleNotificationManager() {
 	// 创建通知管理器
-	notificationManager := ConfigChangeNotifier.NewNotificationManager(ConfigChangeNotifier.NotificationTypeLocal)
+	notificationManager := ConfigManager.NewNotificationManager(ConfigManager.NotificationTypeLocal)
 
 	// 创建配置变更事件
-	event := ConfigChangeNotifier.NewConfigurationChangeEvent("nifi.web.http.port", "9090", "Example", "UPDATE")
+	event := ConfigManager.NewConfigurationChangeEvent("nifi.web.http.port", "9090", "Example", "UPDATE")
 
 	// 发送通知
 	err := notificationManager.SendNotification(event)
@@ -253,7 +249,7 @@ func ExampleNotificationManager() {
 	}
 
 	// 切换到分布式通知
-	notificationManager.SetNotificationType(ConfigChangeNotifier.NotificationTypeDistributed)
+	notificationManager.SetNotificationType(ConfigManager.NotificationTypeDistributed)
 
 	// 发送分布式通知
 	err = notificationManager.SendNotification(event)
@@ -265,7 +261,7 @@ func ExampleNotificationManager() {
 // ExampleVariableResolver 变量解析器示例
 func ExampleVariableResolver() {
 	// 创建变量解析器
-	resolver := EnvironmentVariableInjector.NewVariableResolver()
+	resolver := ConfigManager.NewVariableResolver()
 
 	// 注册自定义解析器
 	resolver.RegisterResolver("CURRENT_TIME", func() (string, error) {
@@ -293,14 +289,14 @@ func main() {
 	configManager := ConfigManager.NewStandardConfigManager()
 
 	// 创建密钥管理器
-	keyManager := SensitivePropertyEncryptor.NewKeyStoreManager("keystore.p12", "nifi-key", "nifi-secret")
+	keyManager := ConfigManager.NewKeyStoreManager("keystore.p12", "nifi-key", "nifi-secret")
 	secretKey, err := keyManager.GenerateOrLoadKey()
 	if err != nil {
 		log.Fatalf("生成密钥失败: %v", err)
 	}
 
 	// 设置敏感属性提供者
-	sensitiveProvider := SensitivePropertyEncryptor.NewAESSensitivePropertyProvider(secretKey)
+	sensitiveProvider := ConfigManager.NewAESSensitivePropertyProvider(secretKey)
 	configManager.SetSensitivePropertyProvider(sensitiveProvider)
 
 	// 设置配置属性

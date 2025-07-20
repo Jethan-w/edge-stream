@@ -5,9 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/edge-stream/internal/flowfile"
-	"github.com/edge-stream/internal/sink"
-	"github.com/edge-stream/internal/sink/TargetAdapter"
+	"github.com/crazy/edge-stream/internal/flowfile"
+	"github.com/crazy/edge-stream/internal/sink"
 )
 
 // ExampleSinkUsage Sink 使用示例
@@ -150,7 +149,7 @@ func ExampleCustomProtocol() {
 
 	// 2. 注册自定义协议
 	sinkInstance.RegisterCustomProtocol("redis", &RedisOutputAdapter{
-		AbstractTargetAdapter: TargetAdapter.NewAbstractTargetAdapter(
+		AbstractTargetAdapter: sink.NewAbstractTargetAdapter(
 			"redis-adapter",
 			"Redis Output Adapter",
 			"Redis",
@@ -181,7 +180,7 @@ func ExampleCustomProtocol() {
 
 // RedisOutputAdapter Redis 输出适配器示例
 type RedisOutputAdapter struct {
-	*TargetAdapter.AbstractTargetAdapter
+	*sink.AbstractTargetAdapter
 	host     string
 	port     int
 	database int
@@ -197,19 +196,16 @@ func (r *RedisOutputAdapter) doWrite(flowFile interface{}) error {
 	ff := flowFile.(*flowfile.FlowFile)
 
 	// 获取内容
-	content, err := ff.GetContent()
-	if err != nil {
-		return fmt.Errorf("failed to get flowfile content: %w", err)
-	}
+	content := ff.Content
 
 	// 获取 Redis 键
-	key := ff.GetAttribute("redis.key")
+	key := ff.Attributes["redis.key"]
 	if key == "" {
-		key = ff.GetAttribute("uuid") // 使用 UUID 作为默认键
+		key = ff.Attributes["uuid"] // 使用 UUID 作为默认键
 	}
 
 	// 获取数据类型
-	dataType := ff.GetAttribute("redis.data.type")
+	dataType := ff.Attributes["redis.data.type"]
 	if dataType == "" {
 		dataType = "string" // 默认类型
 	}
@@ -235,12 +231,12 @@ func createExampleFlowFile() *flowfile.FlowFile {
 	ff := flowfile.NewFlowFile()
 
 	// 设置属性
-	ff.SetAttribute("filename", "example.txt")
-	ff.SetAttribute("uuid", "12345678-1234-1234-1234-123456789abc")
-	ff.SetAttribute("timestamp", time.Now().Format(time.RFC3339))
-	ff.SetAttribute("source", "example")
-	ff.SetAttribute("redis.key", "flowfile:example")
-	ff.SetAttribute("redis.data.type", "string")
+	ff.Attributes["filename"] = "example.txt"
+	ff.Attributes["uuid"] = "12345678-1234-1234-1234-123456789abc"
+	ff.Attributes["timestamp"] = time.Now().Format(time.RFC3339)
+	ff.Attributes["source"] = "example"
+	ff.Attributes["redis.key"] = "flowfile:example"
+	ff.Attributes["redis.data.type"] = "string"
 
 	// 设置内容
 	content := []byte(`{
@@ -249,7 +245,7 @@ func createExampleFlowFile() *flowfile.FlowFile {
 		"level": "INFO",
 		"source": "example"
 	}`)
-	ff.SetContent(content)
+	ff.Content = content
 
 	return ff
 }

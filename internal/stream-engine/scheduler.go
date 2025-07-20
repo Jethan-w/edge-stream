@@ -192,7 +192,7 @@ func (s *StandardScheduler) Unschedule(processorID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	processor, exists := s.processors[processorID]
+	_, exists := s.processors[processorID]
 	if !exists {
 		return fmt.Errorf("processor %s is not scheduled", processorID)
 	}

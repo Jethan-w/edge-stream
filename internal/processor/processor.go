@@ -5,15 +5,17 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // Processor 处理器接口定义
 type Processor interface {
 	// Initialize 初始化处理器
-	Initialize(ctx context.Context) error
+	Initialize(ctx ProcessContext) error
 
 	// Process 处理数据
-	Process(ctx context.Context, flowFile *FlowFile) (*FlowFile, error)
+	Process(ctx ProcessContext, flowFile *flowfile.FlowFile) (*flowfile.FlowFile, error)
 
 	// GetRelationships 获取输出关系
 	GetRelationships() []Relationship
@@ -23,6 +25,8 @@ type Processor interface {
 
 	// GetState 获取处理器状态
 	GetState() ProcessorState
+	Stop(ctx ProcessContext) error
+	Start(ctx ProcessContext) error
 }
 
 // ProcessorState 处理器状态
@@ -37,16 +41,6 @@ const (
 	StateError
 	StateStopped
 )
-
-// FlowFile 数据流文件
-type FlowFile struct {
-	ID         string
-	Content    []byte
-	Attributes map[string]string
-	Size       int64
-	Timestamp  time.Time
-	LineageID  string
-}
 
 // Relationship 输出关系
 type Relationship struct {
@@ -65,6 +59,7 @@ type PropertyDescriptor struct {
 
 // ProcessContext 处理上下文
 type ProcessContext struct {
+	context.Context
 	Properties map[string]string
 	Session    *ProcessSession
 	State      map[string]interface{}
@@ -85,7 +80,7 @@ type AbstractProcessor struct {
 }
 
 // Initialize 初始化抽象处理器
-func (ap *AbstractProcessor) Initialize(ctx context.Context) error {
+func (ap *AbstractProcessor) Initialize(ctx ProcessContext) error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
@@ -159,9 +154,9 @@ func (ap *AbstractProcessor) AddPropertyDescriptor(name, description string, req
 
 // DataTransformer 数据转换接口
 type DataTransformer interface {
-	Transform(input *FlowFile, context *ProcessContext) (*FlowFile, error)
-	ConvertFormat(input *FlowFile, sourceFormat, targetFormat string) (*FlowFile, error)
-	ModifyContent(input *FlowFile, strategy ContentModificationStrategy) (*FlowFile, error)
+	Transform(input *flowfile.FlowFile, context *ProcessContext) (*flowfile.FlowFile, error)
+	ConvertFormat(input *flowfile.FlowFile, sourceFormat, targetFormat string) (*flowfile.FlowFile, error)
+	ModifyContent(input *flowfile.FlowFile, strategy ContentModificationStrategy) (*flowfile.FlowFile, error)
 }
 
 // ContentModificationStrategy 内容修改策略
@@ -174,24 +169,6 @@ const (
 	StrategyRegexReplace
 	StrategyTransform
 )
-
-// RouteRule 路由规则
-type RouteRule struct {
-	AttributeName      string
-	Condition          string
-	TargetRelationship string
-}
-
-// Evaluate 评估路由规则
-func (rr *RouteRule) Evaluate(flowFile *FlowFile) bool {
-	attributeValue, exists := flowFile.Attributes[rr.AttributeName]
-	if !exists {
-		return false
-	}
-
-	// 简单的条件匹配，可以根据需要扩展
-	return attributeValue == rr.Condition
-}
 
 // SemanticExtractor 语义提取接口
 type SemanticExtractor interface {

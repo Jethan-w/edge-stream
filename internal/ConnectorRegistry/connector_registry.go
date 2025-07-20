@@ -2,10 +2,6 @@ package ConnectorRegistry
 
 import (
 	"fmt"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/ComponentRegistrar"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/NARPackageManager"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/SecurityValidator"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/VersionController"
 	"sync"
 )
 
@@ -77,7 +73,7 @@ type ConnectorDescriptor interface {
 
 // NarBundleConnectorDescriptor NAR包形式的连接器描述符
 type NarBundleConnectorDescriptor struct {
-	Bundle      *NARPackageManager.Bundle
+	Bundle      *Bundle
 	Identifier  string
 	Name        string
 	Type        ComponentType
@@ -89,7 +85,7 @@ type NarBundleConnectorDescriptor struct {
 }
 
 // NewNarBundleConnectorDescriptor 创建新的NAR包连接器描述符
-func NewNarBundleConnectorDescriptor(bundle *NARPackageManager.Bundle, name string, componentType ComponentType) *NarBundleConnectorDescriptor {
+func NewNarBundleConnectorDescriptor(bundle *Bundle, name string, componentType ComponentType) *NarBundleConnectorDescriptor {
 	return &NarBundleConnectorDescriptor{
 		Bundle:      bundle,
 		Identifier:  fmt.Sprintf("%s:%s:%s", bundle.Group, bundle.Artifact, bundle.Version),
@@ -169,10 +165,10 @@ func (n *NarBundleConnectorDescriptor) SetMetadata(key, value string) {
 // StandardConnectorRegistry 标准连接器注册表实现
 type StandardConnectorRegistry struct {
 	registeredConnectors map[string]ConnectorDescriptor
-	bundleRepository     NARPackageManager.BundleRepository
-	versionController    VersionController.VersionController
-	extensionMapper      ComponentRegistrar.ExtensionMappingProvider
-	securityValidator    SecurityValidator.SecurityValidator
+	bundleRepository     BundleRepository
+	versionController    VersionController
+	extensionMapper      ExtensionMappingProvider
+	securityValidator    SecurityValidator
 	mutex                sync.RWMutex
 }
 
@@ -180,10 +176,10 @@ type StandardConnectorRegistry struct {
 func NewStandardConnectorRegistry() *StandardConnectorRegistry {
 	return &StandardConnectorRegistry{
 		registeredConnectors: make(map[string]ConnectorDescriptor),
-		bundleRepository:     NARPackageManager.NewFileSystemBundleRepository(),
-		versionController:    VersionController.NewStandardVersionController(),
-		extensionMapper:      ComponentRegistrar.NewJsonExtensionMappingProvider(),
-		securityValidator:    SecurityValidator.NewComponentSecurityValidator(),
+		bundleRepository:     NewFileSystemBundleRepository(),
+		versionController:    NewStandardVersionController(),
+		extensionMapper:      NewJsonExtensionMappingProvider(),
+		securityValidator:    NewComponentSecurityValidator(),
 	}
 }
 
@@ -424,7 +420,7 @@ func (scr *StandardConnectorRegistry) notifyConnectorUpdated(descriptor Connecto
 }
 
 // SetBundleRepository 设置Bundle仓库
-func (scr *StandardConnectorRegistry) SetBundleRepository(repository NARPackageManager.BundleRepository) {
+func (scr *StandardConnectorRegistry) SetBundleRepository(repository BundleRepository) {
 	scr.mutex.Lock()
 	defer scr.mutex.Unlock()
 
@@ -432,7 +428,7 @@ func (scr *StandardConnectorRegistry) SetBundleRepository(repository NARPackageM
 }
 
 // SetVersionController 设置版本控制器
-func (scr *StandardConnectorRegistry) SetVersionController(controller VersionController.VersionController) {
+func (scr *StandardConnectorRegistry) SetVersionController(controller VersionController) {
 	scr.mutex.Lock()
 	defer scr.mutex.Unlock()
 
@@ -440,7 +436,7 @@ func (scr *StandardConnectorRegistry) SetVersionController(controller VersionCon
 }
 
 // SetExtensionMapper 设置扩展映射提供者
-func (scr *StandardConnectorRegistry) SetExtensionMapper(mapper ComponentRegistrar.ExtensionMappingProvider) {
+func (scr *StandardConnectorRegistry) SetExtensionMapper(mapper ExtensionMappingProvider) {
 	scr.mutex.Lock()
 	defer scr.mutex.Unlock()
 
@@ -448,7 +444,7 @@ func (scr *StandardConnectorRegistry) SetExtensionMapper(mapper ComponentRegistr
 }
 
 // SetSecurityValidator 设置安全验证器
-func (scr *StandardConnectorRegistry) SetSecurityValidator(validator SecurityValidator.SecurityValidator) {
+func (scr *StandardConnectorRegistry) SetSecurityValidator(validator SecurityValidator) {
 	scr.mutex.Lock()
 	defer scr.mutex.Unlock()
 

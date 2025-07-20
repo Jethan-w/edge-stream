@@ -5,10 +5,6 @@ import (
 	"log"
 
 	"github.com/crazy/edge-stream/internal/ConnectorRegistry"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/ComponentRegistrar"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/NARPackageManager"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/SecurityValidator"
-	"github.com/crazy/edge-stream/internal/ConnectorRegistry/VersionController"
 )
 
 // ExampleUsage 使用示例
@@ -17,13 +13,13 @@ func ExampleUsage() {
 	registry := ConnectorRegistry.NewStandardConnectorRegistry()
 
 	// 创建Bundle
-	bundle := &NARPackageManager.Bundle{
+	bundle := &ConnectorRegistry.Bundle{
 		ID:       "org.apache.nifi:nifi-standard-nar",
 		Group:    "org.apache.nifi",
 		Artifact: "nifi-standard-nar",
 		Version:  "1.20.0",
 		File:     "nifi-standard-nar-1.20.0.nar",
-		Dependencies: []*NARPackageManager.Dependency{
+		Dependencies: []*ConnectorRegistry.Dependency{
 			{
 				Group:    "org.apache.nifi",
 				Artifact: "nifi-api-nar",
@@ -80,11 +76,11 @@ func ExampleUsage() {
 // ExampleNARPackageManagement NAR包管理示例
 func ExampleNARPackageManagement() {
 	// 创建Bundle仓库
-	repository := NARPackageManager.NewFileSystemBundleRepository()
+	repository := ConnectorRegistry.NewFileSystemBundleRepository()
 	repository.SetRepositoryPath("custom-bundles")
 
 	// 创建Bundle
-	bundle := &NARPackageManager.Bundle{
+	bundle := &ConnectorRegistry.Bundle{
 		ID:       "com.example:custom-processor-nar",
 		Group:    "com.example",
 		Artifact: "custom-processor-nar",
@@ -116,7 +112,7 @@ func ExampleNARPackageManagement() {
 	}
 
 	// 创建依赖解析器
-	resolver := NARPackageManager.NewBundleDependencyResolver(repository)
+	resolver := ConnectorRegistry.NewBundleDependencyResolver(repository)
 
 	// 解析依赖
 	err = resolver.ResolveDependencies(bundle)
@@ -128,13 +124,13 @@ func ExampleNARPackageManagement() {
 // ExampleVersionControl 版本控制示例
 func ExampleVersionControl() {
 	// 创建版本控制器
-	controller := VersionController.NewStandardVersionController()
+	controller := ConnectorRegistry.NewStandardVersionController()
 
 	// 创建版本管理器
-	manager := VersionController.NewVersionManager(controller)
+	manager := ConnectorRegistry.NewVersionManager(controller)
 
 	// 设置版本控制策略
-	manager.SetStrategy(VersionController.VersionControlStrategySemantic)
+	manager.SetStrategy(ConnectorRegistry.VersionControlStrategySemantic)
 
 	// 创建流程快照数据
 	snapshotData := map[string]interface{}{
@@ -203,7 +199,7 @@ func ExampleVersionControl() {
 // ExampleExtensionMapping 扩展映射示例
 func ExampleExtensionMapping() {
 	// 创建扩展注册表
-	extensionRegistry := ComponentRegistrar.NewExtensionRegistry()
+	extensionRegistry := ConnectorRegistry.NewExtensionRegistry()
 
 	// 注册扩展
 	err := extensionRegistry.RegisterExtension(
@@ -238,10 +234,10 @@ func ExampleExtensionMapping() {
 // ExampleSecurityValidation 安全验证示例
 func ExampleSecurityValidation() {
 	// 创建安全管理器
-	securityManager := SecurityValidator.NewSecurityManager()
+	securityManager := ConnectorRegistry.NewSecurityManager()
 
 	// 创建安全策略
-	policy := SecurityValidator.NewSecurityPolicy()
+	policy := ConnectorRegistry.NewSecurityPolicy()
 	policy.AddAllowedRepository("github.com/apache/nifi")
 	policy.AddBlockedComponent("malicious-component")
 
@@ -249,7 +245,7 @@ func ExampleSecurityValidation() {
 	securityManager.SetSecurityPolicy(policy)
 
 	// 创建模拟Bundle
-	bundle := &NARPackageManager.Bundle{
+	bundle := &ConnectorRegistry.Bundle{
 		ID:       "org.apache.nifi:nifi-standard-nar",
 		Group:    "org.apache.nifi",
 		Artifact: "nifi-standard-nar",
@@ -267,10 +263,10 @@ func ExampleSecurityValidation() {
 	fmt.Println("组件验证通过")
 
 	// 创建社区组件注册表
-	communityRegistry := SecurityValidator.NewCommunityComponentRegistry()
+	communityRegistry := ConnectorRegistry.NewCommunityComponentRegistry()
 
 	// 添加GitHub仓库
-	githubRepo := SecurityValidator.NewGitHubComponentRepository(
+	githubRepo := ConnectorRegistry.NewGitHubComponentRepository(
 		"https://api.github.com",
 		"your-github-token",
 	)
@@ -289,10 +285,10 @@ func ExampleSecurityValidation() {
 // ExampleComponentDiscovery 组件发现示例
 func ExampleComponentDiscovery() {
 	// 创建扩展映射提供者
-	mappingProvider := ComponentRegistrar.NewJsonExtensionMappingProvider()
+	mappingProvider := ConnectorRegistry.NewJsonExtensionMappingProvider()
 
 	// 创建动态组件发现器
-	discovery := ComponentRegistrar.NewDynamicComponentDiscovery(mappingProvider)
+	discovery := ConnectorRegistry.NewDynamicComponentDiscovery(mappingProvider)
 
 	// 注册扩展映射
 	err := mappingProvider.RegisterExtension(
@@ -327,7 +323,7 @@ func ExampleComponentDiscovery() {
 // ExampleBundleStructureValidation Bundle结构验证示例
 func ExampleBundleStructureValidation() {
 	// 创建NAR包结构验证器
-	structure := NARPackageManager.NewNarBundleStructure()
+	structure := ConnectorRegistry.NewNarBundleStructure()
 
 	// 验证Bundle结构
 	err := structure.ValidateStructure("bundles/org.apache.nifi/nifi-standard-nar/1.20.0")
@@ -342,7 +338,7 @@ func ExampleBundleStructureValidation() {
 // ExampleVersionCompatibility 版本兼容性示例
 func ExampleVersionCompatibility() {
 	// 创建版本兼容性检查器
-	checker := VersionController.NewVersionCompatibilityChecker()
+	checker := ConnectorRegistry.NewVersionCompatibilityChecker()
 
 	// 检查版本兼容性
 	isCompatible := checker.IsCompatible("1.0.0", "1.1.0")
@@ -355,7 +351,7 @@ func ExampleVersionCompatibility() {
 // ExamplePGPSignatureVerification PGP签名验证示例
 func ExamplePGPSignatureVerification() {
 	// 创建PGP签名验证器
-	verifier := SecurityValidator.NewPGPSignatureVerifier()
+	verifier := ConnectorRegistry.NewPGPSignatureVerifier()
 
 	// 加载公钥环
 	err := verifier.LoadPublicKeyRing("keys/public-keyring.gpg")
@@ -377,10 +373,10 @@ func ExamplePGPSignatureVerification() {
 // ExampleCommunityComponentIntegration 社区组件集成示例
 func ExampleCommunityComponentIntegration() {
 	// 创建社区组件注册表
-	communityRegistry := SecurityValidator.NewCommunityComponentRegistry()
+	communityRegistry := ConnectorRegistry.NewCommunityComponentRegistry()
 
 	// 添加多个仓库
-	githubRepo := SecurityValidator.NewGitHubComponentRepository(
+	githubRepo := ConnectorRegistry.NewGitHubComponentRepository(
 		"https://api.github.com",
 		"your-github-token",
 	)

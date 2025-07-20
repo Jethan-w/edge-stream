@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/edge-stream/internal/ConfigManager"
-	"github.com/edge-stream/internal/ConnectorRegistry"
-	"github.com/edge-stream/internal/MetricCollector"
-	"github.com/edge-stream/internal/StateManager"
+	"github.com/crazy/edge-stream/internal/ConfigManager"
+	"github.com/crazy/edge-stream/internal/ConnectorRegistry"
+	"github.com/crazy/edge-stream/internal/MetricCollector"
+	"github.com/crazy/edge-stream/internal/StateManager"
 )
 
 // StreamEngine 是数据流转的"动力核心"，驱动数据在Pipeline中高效传输、处理与调度的底层引擎
@@ -59,7 +59,7 @@ type StandardStreamEngine struct {
 	configManager      *ConfigManager.ConfigManager
 	connectorRegistry  *ConnectorRegistry.ConnectorRegistry
 	metricCollector    *MetricCollector.MetricCollector
-	stateManager       *StateManager.StateManager
+	stateManager       *statemanager.StateManager
 	threadPoolManager  ThreadPoolManager
 	clusterCoordinator ClusterCoordinator
 	queueManager       QueueManager
@@ -119,7 +119,7 @@ func (e *StandardStreamEngine) initializeComponents() {
 	e.scheduler = NewScheduler()
 
 	// 初始化队列管理器
-	e.queueManager = NewQueueManager(e.config.QueueCapacity)
+	e.queueManager = NewQueueManager(int64(e.config.QueueCapacity))
 
 	// 初始化背压管理器
 	e.backpressureMgr = NewBackpressureManager(e.config.BackpressureThreshold)
@@ -319,6 +319,6 @@ func (e *StandardStreamEngine) SetMetricCollector(mc *MetricCollector.MetricColl
 }
 
 // SetStateManager 设置状态管理器
-func (e *StandardStreamEngine) SetStateManager(sm *StateManager.StateManager) {
+func (e *StandardStreamEngine) SetStateManager(sm *statemanager.StateManager) {
 	e.stateManager = sm
 }

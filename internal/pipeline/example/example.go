@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/crazy/edge-stream/internal/flowfile"
 	"github.com/crazy/edge-stream/internal/pipeline"
-	"github.com/crazy/edge-stream/internal/pipeline/Designer"
-	"github.com/crazy/edge-stream/internal/pipeline/Provenance"
+	"github.com/crazy/edge-stream/internal/processor"
 )
 
 // ExamplePipelineUsage 展示Pipeline模块的基本使用
@@ -16,7 +16,7 @@ func ExamplePipelineUsage() {
 	fmt.Println("=== Pipeline模块使用示例 ===")
 
 	// 创建上下文
-	ctx := context.Background()
+	// ctx := context.Background()
 
 	// 1. 流程设计与编排示例
 	fmt.Println("\n1. 流程设计与编排示例")
@@ -42,7 +42,7 @@ func ExamplePipelineUsage() {
 // examplePipelineDesign 流程设计与编排示例
 func examplePipelineDesign() {
 	// 创建流程设计器
-	designer := designer.NewPipelineDesigner()
+	designer := pipeline.NewPipelineDesigner()
 
 	// 初始化设计器
 	ctx := context.Background()
@@ -55,7 +55,7 @@ func examplePipelineDesign() {
 	fmt.Printf("创建流程组: %s (ID: %s)\n", processGroup.Name, processGroup.ID)
 
 	// 添加处理器
-	processor1 := designer.NewProcessorDTO("processor-1", "GetFile", "GetFile")
+	processor1 := pipeline.NewProcessorDTO("processor-1", "GetFile", "GetFile")
 	processor1.SetProperty("Input Directory", "/var/log")
 	processor1.SetProperty("File Filter", "*.log")
 	processor1.SetScheduling("timer", "primary", 5*time.Second, 1)
@@ -64,7 +64,7 @@ func examplePipelineDesign() {
 		log.Printf("添加处理器失败: %v", err)
 	}
 
-	processor2 := designer.NewProcessorDTO("processor-2", "SplitText", "SplitText")
+	processor2 := pipeline.NewProcessorDTO("processor-2", "SplitText", "SplitText")
 	processor2.SetProperty("Line Split Count", "100")
 	processor2.SetScheduling("event", "primary", 0, 2)
 
@@ -72,7 +72,7 @@ func examplePipelineDesign() {
 		log.Printf("添加处理器失败: %v", err)
 	}
 
-	processor3 := designer.NewProcessorDTO("processor-3", "PutKafka", "PutKafka")
+	processor3 := pipeline.NewProcessorDTO("processor-3", "PutKafka", "PutKafka")
 	processor3.SetProperty("Kafka Topic", "log-events")
 	processor3.SetProperty("Bootstrap Servers", "localhost:9092")
 	processor3.SetScheduling("event", "primary", 0, 1)
@@ -82,14 +82,14 @@ func examplePipelineDesign() {
 	}
 
 	// 创建连接
-	connection1 := designer.NewConnectionDTO("connection-1", "GetFile to SplitText", "processor-1", "processor-2")
+	connection1 := pipeline.NewConnectionDTO("connection-1", "GetFile to SplitText", "processor-1", "processor-2")
 	connection1.SetPrioritizer("oldest_first")
 
 	if err := designer.CreateConnection(processGroup, connection1); err != nil {
 		log.Printf("创建连接失败: %v", err)
 	}
 
-	connection2 := designer.NewConnectionDTO("connection-2", "SplitText to PutKafka", "processor-2", "processor-3")
+	connection2 := pipeline.NewConnectionDTO("connection-2", "SplitText to PutKafka", "processor-2", "processor-3")
 	connection2.SetPrioritizer("newest_first")
 
 	if err := designer.CreateConnection(processGroup, connection2); err != nil {
@@ -104,7 +104,7 @@ func examplePipelineDesign() {
 // exampleVersionManagement 版本管理示例
 func exampleVersionManagement() {
 	// 创建版本管理器
-	versionManager := versionmanager.NewVersionManager()
+	versionManager := pipeline.NewVersionManager()
 
 	// 初始化版本管理器
 	ctx := context.Background()
@@ -167,7 +167,7 @@ func exampleVersionManagement() {
 // exampleDataProvenance 数据溯源示例
 func exampleDataProvenance() {
 	// 创建溯源跟踪器
-	provenanceTracker := provenance.NewProvenanceTracker()
+	provenanceTracker := pipeline.NewProvenanceTracker()
 
 	// 初始化溯源跟踪器
 	ctx := context.Background()
@@ -176,10 +176,10 @@ func exampleDataProvenance() {
 	}
 
 	// 创建FlowFile
-	flowFile := pipeline.NewFlowFile()
-	flowFile.SetContent([]byte("test data"))
-	flowFile.AddAttribute("filename", "test.log")
-	flowFile.AddAttribute("size", "9")
+	flowFile := flowfile.NewFlowFile()
+	flowFile.Content = ([]byte("test data"))
+	flowFile.Attributes["filename"] = "test.log"
+	flowFile.Attributes["size"] = "9"
 
 	fmt.Printf("创建FlowFile: %s (血缘ID: %s)\n", flowFile.UUID, flowFile.LineageID)
 
@@ -189,7 +189,7 @@ func exampleDataProvenance() {
 		"path":   "/var/log/test.log",
 	}
 
-	if err := provenanceTracker.RecordEvent(flowFile, provenance.EventTypeCreate, "source-processor", details1); err != nil {
+	if err := provenanceTracker.RecordEvent(flowFile, pipeline.EventTypeCreate, "source-processor", details1); err != nil {
 		log.Printf("记录创建事件失败: %v", err)
 	}
 
@@ -201,7 +201,7 @@ func exampleDataProvenance() {
 		"lines":     "1",
 	}
 
-	if err := provenanceTracker.RecordEvent(flowFile, provenance.EventTypeProcess, "split-processor", details2); err != nil {
+	if err := provenanceTracker.RecordEvent(flowFile, pipeline.EventTypeProcess, "split-processor", details2); err != nil {
 		log.Printf("记录处理事件失败: %v", err)
 	}
 
@@ -213,7 +213,7 @@ func exampleDataProvenance() {
 		"topic":       "log-events",
 	}
 
-	if err := provenanceTracker.RecordEvent(flowFile, provenance.EventTypeSend, "kafka-processor", details3); err != nil {
+	if err := provenanceTracker.RecordEvent(flowFile, pipeline.EventTypeSend, "kafka-processor", details3); err != nil {
 		log.Printf("记录发送事件失败: %v", err)
 	}
 
@@ -235,7 +235,7 @@ func exampleDataProvenance() {
 	}
 
 	// 创建血缘跟踪器
-	lineageTracker := provenance.NewDataLineageTracker(provenanceTracker)
+	lineageTracker := pipeline.NewDataLineageTracker(provenanceTracker)
 
 	// 获取血缘统计信息
 	stats, err := lineageTracker.GetLineageStatistics(flowFile.LineageID)
@@ -251,7 +251,7 @@ func exampleDataProvenance() {
 	}
 
 	// 创建溯源监控器
-	provenanceMonitor := provenance.NewProvenanceMonitor(provenanceTracker)
+	provenanceMonitor := pipeline.NewProvenanceMonitor(provenanceTracker)
 
 	// 获取事件统计
 	eventCount, err := provenanceMonitor.GetEventCount()
@@ -276,22 +276,22 @@ func exampleDataProvenance() {
 // exampleFlowFileProcessing FlowFile处理示例
 func exampleFlowFileProcessing() {
 	// 创建FlowFile
-	flowFile := pipeline.NewFlowFile()
-	flowFile.SetContent([]byte("Hello, EdgeStream Pipeline!"))
-	flowFile.AddAttribute("filename", "hello.txt")
-	flowFile.AddAttribute("encoding", "UTF-8")
-	flowFile.AddAttribute("size", "26")
+	flowFile := flowfile.NewFlowFile()
+	flowFile.Content = ([]byte("Hello, EdgeStream Pipeline!"))
+	flowFile.Attributes["filename"] = "hello.txt"
+	flowFile.Attributes["encoding"] = "UTF-8"
+	flowFile.Attributes["size"] = "26"
 
 	fmt.Printf("创建FlowFile:\n")
 	fmt.Printf("  UUID: %s\n", flowFile.UUID)
 	fmt.Printf("  血缘ID: %s\n", flowFile.LineageID)
-	fmt.Printf("  大小: %d bytes\n", flowFile.GetSize())
-	fmt.Printf("  时间戳: %s\n", flowFile.GetTimestamp().Format(time.RFC3339))
-	fmt.Printf("  内容: %s\n", string(flowFile.GetContent()))
+	fmt.Printf("  大小: %d bytes\n", flowFile.Size)
+	fmt.Printf("  时间戳: %s\n", flowFile.Timestamp.Format(time.RFC3339))
+	fmt.Printf("  内容: %s\n", string(flowFile.Content))
 
 	// 修改FlowFile属性
-	flowFile.AddAttribute("processed", "true")
-	flowFile.AddAttribute("processor", "example-processor")
+	flowFile.Attributes["processed"] = "true"
+	flowFile.Attributes["processor"] = "example-processor"
 
 	fmt.Printf("修改后的属性:\n")
 	for key, value := range flowFile.Attributes {
@@ -423,18 +423,18 @@ func ExampleCustomProcessor() {
 	fmt.Println("\n=== 自定义处理器示例 ===")
 
 	// 创建流程设计器
-	designer := designer.NewPipelineDesigner()
+	designer := pipeline.NewPipelineDesigner()
 
 	// 注册自定义处理器
-	designer.processorFactory.RegisterProcessor("CustomProcessor", func() interface{} {
-		return &CustomProcessor{}
+	designer.ProcessorFactory.RegisterProcessor("CustomProcessor", func() interface{} {
+		return processor.FormatConverter{}
 	})
 
 	// 创建流程组
 	processGroup := designer.CreateProcessGroup("custom-processor-test")
 
 	// 添加自定义处理器
-	processorDTO := designer.NewProcessorDTO("custom-1", "CustomProcessor", "CustomProcessor")
+	processorDTO := pipeline.NewProcessorDTO("custom-1", "CustomProcessor", "CustomProcessor")
 	processorDTO.SetProperty("custom.property", "custom.value")
 
 	if err := designer.AddProcessor(processGroup, processorDTO); err != nil {
@@ -458,10 +458,10 @@ func ExamplePipelineOrchestration() {
 	fmt.Println("\n=== 流程编排示例 ===")
 
 	// 创建流程设计器
-	designer := designer.NewPipelineDesigner()
+	designer := pipeline.NewPipelineDesigner()
 
 	// 创建流程编排器
-	orchestrator := designer.NewPipelineOrchestrator(designer)
+	orchestrator := pipeline.NewPipelineOrchestrator(designer)
 
 	// 初始化编排器
 	ctx := context.Background()
@@ -473,14 +473,14 @@ func ExamplePipelineOrchestration() {
 	processGroup := designer.CreateProcessGroup("orchestration-test")
 
 	// 添加处理器
-	processor1 := designer.NewProcessorDTO("proc-1", "LogProcessor", "LogProcessor")
-	processor2 := designer.NewProcessorDTO("proc-2", "LogProcessor", "LogProcessor")
+	processor1 := pipeline.NewProcessorDTO("proc-1", "LogProcessor", "LogProcessor")
+	processor2 := pipeline.NewProcessorDTO("proc-2", "LogProcessor", "LogProcessor")
 
 	designer.AddProcessor(processGroup, processor1)
 	designer.AddProcessor(processGroup, processor2)
 
 	// 创建连接
-	connection := designer.NewConnectionDTO("conn-1", "连接", "proc-1", "proc-2")
+	connection := pipeline.NewConnectionDTO("conn-1", "连接", "proc-1", "proc-2")
 	designer.CreateConnection(processGroup, connection)
 
 	// 部署流程

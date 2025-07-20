@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crazy/edge-stream/internal/flowfile"
 	"github.com/crazy/edge-stream/internal/processor"
-	"github.com/crazy/edge-stream/internal/sink"
 )
 
 // Pipeline 数据处理流程接口
@@ -76,78 +76,6 @@ func (ps PipelineState) String() string {
 	default:
 		return "unknown"
 	}
-}
-
-// FlowFile 数据流转的基本单元
-type FlowFile struct {
-	UUID       string
-	Attributes map[string]string
-	Content    []byte
-	Size       int64
-	Timestamp  time.Time
-	LineageID  string
-	mu         sync.RWMutex
-}
-
-// NewFlowFile 创建新的FlowFile
-func NewFlowFile() *FlowFile {
-	return &FlowFile{
-		UUID:       generateUUID(),
-		Attributes: make(map[string]string),
-		Content:    make([]byte, 0),
-		Timestamp:  time.Now(),
-		LineageID:  generateLineageID(),
-	}
-}
-
-// AddAttribute 添加属性
-func (ff *FlowFile) AddAttribute(key, value string) {
-	ff.mu.Lock()
-	defer ff.mu.Unlock()
-	ff.Attributes[key] = value
-}
-
-// GetAttribute 获取属性
-func (ff *FlowFile) GetAttribute(key string) string {
-	ff.mu.RLock()
-	defer ff.mu.RUnlock()
-	return ff.Attributes[key]
-}
-
-// SetContent 设置内容
-func (ff *FlowFile) SetContent(content []byte) {
-	ff.mu.Lock()
-	defer ff.mu.Unlock()
-	ff.Content = content
-	ff.Size = int64(len(content))
-}
-
-// GetContent 获取内容
-func (ff *FlowFile) GetContent() []byte {
-	ff.mu.RLock()
-	defer ff.mu.RUnlock()
-	return ff.Content
-}
-
-// GetSize 获取大小
-func (ff *FlowFile) GetSize() int64 {
-	ff.mu.RLock()
-	defer ff.mu.RUnlock()
-	return ff.Size
-}
-
-// GetTimestamp 获取时间戳
-func (ff *FlowFile) GetTimestamp() time.Time {
-	ff.mu.RLock()
-	defer ff.mu.RUnlock()
-	return ff.Timestamp
-}
-
-// GetLineageID 获取血缘ID
-func (ff *FlowFile) GetLineageID() string {
-	ff.mu.RLock()
-	defer ff.mu.RUnlock()
-	return ff.LineageID
 }
 
 // ProcessGroup 流程组
@@ -422,7 +350,7 @@ func (pn *ProcessorNode) GetState() ProcessorNodeState {
 }
 
 // Start 启动处理器节点
-func (pn *ProcessorNode) Start(ctx context.Context) error {
+func (pn *ProcessorNode) Start(ctx processor.ProcessContext) error {
 	pn.mu.Lock()
 	defer pn.mu.Unlock()
 
@@ -439,7 +367,7 @@ func (pn *ProcessorNode) Start(ctx context.Context) error {
 }
 
 // Stop 停止处理器节点
-func (pn *ProcessorNode) Stop(ctx context.Context) error {
+func (pn *ProcessorNode) Stop(ctx processor.ProcessContext) error {
 	pn.mu.Lock()
 	defer pn.mu.Unlock()
 
@@ -456,7 +384,7 @@ func (pn *ProcessorNode) Stop(ctx context.Context) error {
 }
 
 // Process 处理FlowFile
-func (pn *ProcessorNode) Process(ctx context.Context, flowFile *FlowFile) error {
+func (pn *ProcessorNode) Process(ctx context.Context, flowFile *flowfile.FlowFile) error {
 	pn.mu.RLock()
 	defer pn.mu.RUnlock()
 
@@ -574,7 +502,7 @@ func (c *Connection) GetParentGroup() *ProcessGroup {
 }
 
 // Enqueue 入队FlowFile
-func (c *Connection) Enqueue(flowFile *FlowFile) error {
+func (c *Connection) Enqueue(flowFile *flowfile.FlowFile) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -582,7 +510,7 @@ func (c *Connection) Enqueue(flowFile *FlowFile) error {
 }
 
 // Dequeue 出队FlowFile
-func (c *Connection) Dequeue() (*FlowFile, error) {
+func (c *Connection) Dequeue() (*flowfile.FlowFile, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -642,19 +570,19 @@ func (cc *ConnectionConfiguration) GetProperty(key string) string {
 
 // ConnectionQueue 连接队列
 type ConnectionQueue struct {
-	queue []*FlowFile
+	queue []*flowfile.FlowFile
 	mu    sync.RWMutex
 }
 
 // NewConnectionQueue 创建连接队列
 func NewConnectionQueue() *ConnectionQueue {
 	return &ConnectionQueue{
-		queue: make([]*FlowFile, 0),
+		queue: make([]*flowfile.FlowFile, 0),
 	}
 }
 
 // Enqueue 入队
-func (cq *ConnectionQueue) Enqueue(flowFile *FlowFile) error {
+func (cq *ConnectionQueue) Enqueue(flowFile *flowfile.FlowFile) error {
 	cq.mu.Lock()
 	defer cq.mu.Unlock()
 
@@ -663,7 +591,7 @@ func (cq *ConnectionQueue) Enqueue(flowFile *FlowFile) error {
 }
 
 // Dequeue 出队
-func (cq *ConnectionQueue) Dequeue(prioritizer QueuePrioritizer) (*FlowFile, error) {
+func (cq *ConnectionQueue) Dequeue(prioritizer QueuePrioritizer) (*flowfile.FlowFile, error) {
 	cq.mu.Lock()
 	defer cq.mu.Unlock()
 
@@ -696,7 +624,7 @@ func (cq *ConnectionQueue) Size() int {
 
 // QueuePrioritizer 队列优先级策略接口
 type QueuePrioritizer interface {
-	SelectNext(queue []*FlowFile) *FlowFile
+	SelectNext(queue []*flowfile.FlowFile) *flowfile.FlowFile
 }
 
 // OldestFirstPrioritizer 先进先出优先级策略
@@ -708,7 +636,7 @@ func NewOldestFirstPrioritizer() *OldestFirstPrioritizer {
 }
 
 // SelectNext 选择下一个FlowFile
-func (ofp *OldestFirstPrioritizer) SelectNext(queue []*FlowFile) *FlowFile {
+func (ofp *OldestFirstPrioritizer) SelectNext(queue []*flowfile.FlowFile) *flowfile.FlowFile {
 	if len(queue) == 0 {
 		return nil
 	}
@@ -733,7 +661,7 @@ func NewNewestFirstPrioritizer() *NewestFirstPrioritizer {
 }
 
 // SelectNext 选择下一个FlowFile
-func (nfp *NewestFirstPrioritizer) SelectNext(queue []*FlowFile) *FlowFile {
+func (nfp *NewestFirstPrioritizer) SelectNext(queue []*flowfile.FlowFile) *flowfile.FlowFile {
 	if len(queue) == 0 {
 		return nil
 	}
@@ -854,16 +782,4 @@ func (ps *PipelineStatistics) SetActiveProcessors(count int) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 	ps.ActiveProcessors = count
-}
-
-// 工具函数
-func generateUUID() string {
-	// 这里应该使用实际的UUID生成库
-	// 例如：github.com/google/uuid
-	return fmt.Sprintf("flowfile-%d", time.Now().UnixNano())
-}
-
-func generateLineageID() string {
-	// 这里应该使用实际的LineageID生成逻辑
-	return fmt.Sprintf("lineage-%d", time.Now().UnixNano())
 }
