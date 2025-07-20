@@ -1,0 +1,201 @@
+classDiagram
+    class StreamEngine {
+        +config: Config
+        +pipeline: Pipeline
+        +stateManager: StateManager
+        +metricCollector: MetricCollector
+        +Start() error
+        +Stop() error
+        +GetMetrics() MetricSnapshot
+        +ReloadConfig(config Config) error
+    }
+
+    class Pipeline {
+        +sources: []Source
+        +processors: []Processor
+        +sinks: []Sink
+        +windowManager: WindowManager
+        +AddSource(source Source) error
+        +AddProcessor(processor Processor) error
+        +AddSink(sink Sink) error
+        +Process(ctx context.Context) error
+        +GetTopology() Topology
+    }
+
+    class Source {
+        <<interface>>
+        +Connect() error
+        +Read(ctx context.Context) <-chan Record
+        +Close() error
+        +GetConfig() SourceConfig
+    }
+
+    class Processor {
+        <<interface>>
+        +Process(record Record) ([]Record, error)
+        +ProcessBatch(records []Record) ([]Record, error)
+        +GetConfig() ProcessorConfig
+        +Initialize(config ProcessorConfig) error
+    }
+
+    class Sink {
+        <<interface>>
+        +Connect() error
+        +Write(record Record) error
+        +WriteBatch(records []Record) error
+        +Close() error
+        +GetConfig() SinkConfig
+    }
+
+    class Record {
+        +id: string
+        +timestamp: time.Time
+        +data: map[string]interface
+        +metadata: RecordMetadata
+        +schema: Schema
+        +GetValue(key string) interface
+        +SetValue(key string, value interface)
+        +Clone() Record
+        +Serialize() ([]byte, error)
+    }
+
+    class WindowManager {
+        +windows: map[string]Window
+        +CreateWindow(config WindowConfig) Window
+        +ProcessRecord(record Record) []WindowResult
+        +TriggerWindows(timestamp time.Time) []WindowResult
+        +CleanupExpiredWindows()
+    }
+
+    class Window {
+        <<interface>>
+        +Add(record Record) error
+        +Trigger() WindowResult
+        +IsExpired(currentTime time.Time) bool
+        +GetSize() int
+        +GetStartTime() time.Time
+        +GetEndTime() time.Time
+    }
+
+    class TumblingWindow {
+        +size: time.Duration
+        +startTime: time.Time
+        +records: []Record
+        +Add(record Record) error
+        +Trigger() WindowResult
+        +IsExpired(currentTime time.Time) bool
+    }
+
+    class SlidingWindow {
+        +size: time.Duration
+        +slide: time.Duration
+        +startTime: time.Time
+        +records: []Record
+        +Add(record Record) error
+        +Trigger() WindowResult
+        +IsExpired(currentTime time.Time) bool
+    }
+
+    class SessionWindow {
+        +timeout: time.Duration
+        +lastActivity: time.Time
+        +sessionId: string
+        +records: []Record
+        +Add(record Record) error
+        +Trigger() WindowResult
+        +IsExpired(currentTime time.Time) bool
+    }
+
+    class StateManager {
+        +backend: StateBackend
+        +cache: map[string]interface
+        +Put(key string, value interface) error
+        +Get(key string) (interface, error)
+        +Delete(key string) error
+        +CreateCheckpoint() error
+        +RestoreFromCheckpoint(path string) error
+    }
+
+    class StateBackend {
+        <<interface>>
+        +Store(key string, value []byte) error
+        +Retrieve(key string) ([]byte, error)
+        +Delete(key string) error
+        +Scan(prefix string) (map[string][]byte, error)
+        +Close() error
+    }
+
+    class MemoryStateBackend {
+        +data: map[string][]byte
+        +mutex: sync.RWMutex
+        +Store(key string, value []byte) error
+        +Retrieve(key string) ([]byte, error)
+        +Delete(key string) error
+    }
+
+    class BadgerStateBackend {
+        +db: *badger.DB
+        +path: string
+        +Store(key string, value []byte) error
+        +Retrieve(key string) ([]byte, error)
+        +Delete(key string) error
+        +Close() error
+    }
+
+    class SQLProcessor {
+        +query: string
+        +parser: SQLParser
+        +executor: SQLExecutor
+        +schema: Schema
+        +Process(record Record) ([]Record, error)
+        +ParseQuery(query string) error
+        +ValidateSchema(schema Schema) error
+    }
+
+    class ConnectorRegistry {
+        +connectors: map[string]ConnectorFactory
+        +RegisterSource(name string, factory SourceFactory)
+        +RegisterSink(name string, factory SinkFactory)
+        +RegisterProcessor(name string, factory ProcessorFactory)
+        +CreateSource(name string, config SourceConfig) Source
+        +CreateSink(name string, config SinkConfig) Sink
+        +CreateProcessor(name string, config ProcessorConfig) Processor
+    }
+
+    class MetricCollector {
+        +metrics: map[string]Metric
+        +registry: prometheus.Registry
+        +RecordLatency(duration time.Duration)
+        +RecordThroughput(count int64)
+        +RecordError(errorType string)
+        +GetSnapshot() MetricSnapshot
+        +RegisterCustomMetric(name string, metric Metric)
+    }
+
+    class ConfigManager {
+        +configPath: string
+        +config: Config
+        +watcher: fsnotify.Watcher
+        +LoadConfig(path string) (Config, error)
+        +WatchConfig() <-chan Config
+        +ValidateConfig(config Config) error
+        +GetConfig() Config
+    }
+
+    StreamEngine --> Pipeline
+    StreamEngine --> StateManager
+    StreamEngine --> MetricCollector
+    StreamEngine --> ConfigManager
+    Pipeline --> Source
+    Pipeline --> Processor
+    Pipeline --> Sink
+    Pipeline --> WindowManager
+    WindowManager --> Window
+    Window <|-- TumblingWindow
+    Window <|-- SlidingWindow
+    Window <|-- SessionWindow
+    StateManager --> StateBackend
+    StateBackend <|-- MemoryStateBackend
+    StateBackend <|-- BadgerStateBackend
+    Processor <|-- SQLProcessor
+    StreamEngine --> ConnectorRegistry

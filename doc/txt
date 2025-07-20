@@ -1,0 +1,10 @@
+1.stream-engine：这是处理器
+2. pipeline：一个完整的任务
+        source/sink/process/window-manage
+           可以考虑用一个图来关联这些东西
+3.config --》动态配置，可以通过这个更新source/sink/process/window-manage
+metric
+4. state--》持久化需要
+5. connect--这个后续添加
+
+可以通过配置文件定义，然后处理
