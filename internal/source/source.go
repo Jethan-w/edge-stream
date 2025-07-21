@@ -369,18 +369,21 @@ func NewAbstractSource() *AbstractSource {
 // Initialize 初始化抽象数据源
 func (as *AbstractSource) Initialize(ctx context.Context) error {
 	as.mu.Lock()
-	defer as.mu.Unlock()
-
 	as.state = StateConfiguring
+	as.mu.Unlock()
 
-	// 验证配置
+	// 验证配置 - 在锁外进行验证
 	result := as.Validate()
 	if !result.Valid {
+		as.mu.Lock()
 		as.state = StateError
+		as.mu.Unlock()
 		return fmt.Errorf("配置验证失败: %v", result.Errors)
 	}
 
+	as.mu.Lock()
 	as.state = StateReady
+	as.mu.Unlock()
 	return nil
 }
 
@@ -431,15 +434,24 @@ func (as *AbstractSource) SetConfiguration(config *SourceConfiguration) {
 func (as *AbstractSource) Validate() *ValidationResult {
 	result := &ValidationResult{Valid: true}
 
-	config := as.GetConfiguration()
+	as.mu.RLock()
+	config := as.configuration
+	as.mu.RUnlock()
 
-	// 检查基本配置
-	if config.Host == "" {
-		result.AddError("主机地址不能为空")
-	}
+	// 获取类型，直接从Properties中获取，避免再次加锁
+	config.mu.RLock()
+	sourceType := config.Properties["type"]
+	config.mu.RUnlock()
 
-	if config.Port <= 0 || config.Port > 65535 {
-		result.AddError("端口号必须在1-65535之间")
+	// 检查基本配置 - 对于文件类型的数据源，不需要Host和Port
+	if sourceType != "file" {
+		if config.Host == "" {
+			result.AddError("主机地址不能为空")
+		}
+
+		if config.Port <= 0 || config.Port > 65535 {
+			result.AddError("端口号必须在1-65535之间")
+		}
 	}
 
 	if config.MaxConnections <= 0 {

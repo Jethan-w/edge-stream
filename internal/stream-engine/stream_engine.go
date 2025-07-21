@@ -56,10 +56,10 @@ const (
 type StandardStreamEngine struct {
 	mu                 sync.RWMutex
 	status             EngineStatus
-	configManager      *ConfigManager.ConfigManager
-	connectorRegistry  *ConnectorRegistry.ConnectorRegistry
+	configManager      ConfigManager.ConfigManager
+	connectorRegistry  ConnectorRegistry.ConnectorRegistry
 	metricCollector    MetricCollector.MetricCollector
-	stateManager       *statemanager.StateManager
+	stateManager       statemanager.StateManager
 	threadPoolManager  ThreadPoolManager
 	clusterCoordinator ClusterCoordinator
 	queueManager       QueueManager
@@ -304,12 +304,12 @@ func (e *StandardStreamEngine) createTrigger(strategy SchedulingStrategy) Trigge
 }
 
 // SetConfigManager 设置配置管理器
-func (e *StandardStreamEngine) SetConfigManager(cm *ConfigManager.ConfigManager) {
+func (e *StandardStreamEngine) SetConfigManager(cm ConfigManager.ConfigManager) {
 	e.configManager = cm
 }
 
 // SetConnectorRegistry 设置连接器注册表
-func (e *StandardStreamEngine) SetConnectorRegistry(cr *ConnectorRegistry.ConnectorRegistry) {
+func (e *StandardStreamEngine) SetConnectorRegistry(cr ConnectorRegistry.ConnectorRegistry) {
 	e.connectorRegistry = cr
 }
 
@@ -319,6 +319,6 @@ func (e *StandardStreamEngine) SetMetricCollector(mc MetricCollector.MetricColle
 }
 
 // SetStateManager 设置状态管理器
-func (e *StandardStreamEngine) SetStateManager(sm *statemanager.StateManager) {
+func (e *StandardStreamEngine) SetStateManager(sm statemanager.StateManager) {
 	e.stateManager = sm
 }

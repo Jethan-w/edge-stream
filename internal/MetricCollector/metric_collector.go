@@ -337,27 +337,33 @@ func (smc *StandardMetricCollector) RemoveMetric(name string) error {
 	return nil
 }
 func (smc *StandardMetricCollector) Start() {
-	panic("1")
+	// 启动指标收集器
+	// 这里可以启动后台任务来收集系统指标
 }
+
 func (smc *StandardMetricCollector) Stop() {
-	panic("1")
-
+	// 停止指标收集器
+	// 这里可以停止后台任务
 }
+
 func (smc *StandardMetricCollector) RecordMetric(s string, milliseconds int64) {
-	panic("1")
-
+	// 记录指标
+	// 这里可以记录自定义指标
 }
+
 func (smc *StandardMetricCollector) RecordEngineStop() {
-	panic("1")
-
+	// 记录引擎停止事件
+	// 这里可以记录引擎停止相关的指标
 }
+
 func (smc *StandardMetricCollector) RecordProcessorScheduled(id string) {
-	panic("1")
-
+	// 记录处理器调度事件
+	// 这里可以记录处理器调度相关的指标
 }
-func (smc *StandardMetricCollector) RecordEngineStart() {
-	panic("1")
 
+func (smc *StandardMetricCollector) RecordEngineStart() {
+	// 记录引擎启动事件
+	// 这里可以记录引擎启动相关的指标
 }
 
 // ListMetrics 列出所有指标
