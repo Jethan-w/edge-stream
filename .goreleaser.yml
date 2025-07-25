@@ -1,0 +1,179 @@
+# GoReleaser configuration
+version: 1
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: edge-stream
+    main: ./examples/complete/
+    binary: edge-stream
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+archives:
+  - id: edge-stream
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - README.md
+      - LICENSE*
+      - config.yaml
+      - examples/config.example.yaml
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^style:'
+      - '^refactor:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: 'Performance improvements'
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: "{{ .ProjectName }}"
+  name_template: "{{.ProjectName}}-v{{.Version}}"
+  header: |
+    ## EdgeStream Release v{{ .Version }}
+    
+    Welcome to this new release of EdgeStream!
+  footer: |
+    ## Docker Images
+    
+    Docker images are available at:
+    - `docker pull {{ .Env.DOCKER_USERNAME }}/edge-stream:{{ .Version }}`
+    - `docker pull {{ .Env.DOCKER_USERNAME }}/edge-stream:latest`
+    
+    ## Installation
+    
+    ### Binary Installation
+    Download the appropriate binary for your platform from the assets below.
+    
+    ### Docker
+    ```bash
+    docker run -d --name edge-stream \
+      -p 8080:8080 \
+      -v $(pwd)/config.yaml:/app/config.yaml \
+      {{ .Env.DOCKER_USERNAME }}/edge-stream:{{ .Version }}
+    ```
+    
+    ### Go Install
+    ```bash
+    go install github.com/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}/examples/complete@{{ .Tag }}
+    ```
+
+dockers:
+  - image_templates:
+      - "{{ .Env.DOCKER_USERNAME }}/{{ .ProjectName }}:{{ .Version }}"
+      - "{{ .Env.DOCKER_USERNAME }}/{{ .ProjectName }}:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+brews:
+  - name: edge-stream
+    repository:
+      owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+      name: homebrew-tap
+    folder: Formula
+    homepage: "https://github.com/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}"
+    description: "High-performance edge computing data stream processing framework"
+    license: "MIT"
+    test: |
+      system "#{bin}/edge-stream --version"
+    install: |
+      bin.install "edge-stream"
+      etc.install "config.yaml" => "edge-stream/config.yaml"
+      etc.install "examples/config.example.yaml" => "edge-stream/config.example.yaml"
+
+nfpms:
+  - id: edge-stream
+    package_name: edge-stream
+    file_name_template: '{{ .ConventionalFileName }}'
+    vendor: EdgeStream Team
+    homepage: "https://github.com/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}"
+    maintainer: "EdgeStream Team <team@edgestream.dev>"
+    description: |
+      EdgeStream is a high-performance edge computing data stream processing framework
+      designed for real-time data processing and analysis.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    bindir: /usr/bin
+    section: utils
+    contents:
+      - src: ./config.yaml
+        dst: /etc/edge-stream/config.yaml
+        type: config
+      - src: ./examples/config.example.yaml
+        dst: /etc/edge-stream/config.example.yaml
+        type: config
+    scripts:
+      preinstall: "scripts/preinstall.sh"
+      postinstall: "scripts/postinstall.sh"
+      preremove: "scripts/preremove.sh"
+      postremove: "scripts/postremove.sh"
+
+publishers:
+  - name: fury.io
+    ids:
+      - edge-stream
+    dir: "{{ dir .ArtifactPath }}"
+    cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_ACCOUNT }}/

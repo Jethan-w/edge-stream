@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  edge-stream-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: edge-stream-dev
+    ports:
+      - "8080:8080"
+      - "2345:2345"  # Delve debugger port
+    environment:
+      - ENV=development
+      - LOG_LEVEL=debug
+      - CGO_ENABLED=0
+    volumes:
+      - .:/app
+      - go_modules:/go/pkg/mod
+    working_dir: /app
+    command: |
+      sh -c '
+        go mod download &&
+        air -c .air.toml
+      '
+    depends_on:
+      - redis-dev
+      - postgres-dev
+    networks:
+      - edge-stream-dev-network
+    restart: unless-stopped
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: edge-stream-redis-dev
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - edge-stream-dev-network
+    restart: unless-stopped
+
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: edge-stream-postgres-dev
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: edgestream_dev
+      POSTGRES_USER: edgestream_dev
+      POSTGRES_PASSWORD: dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - edge-stream-dev-network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander-dev
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis-dev:6379
+    depends_on:
+      - redis-dev
+    networks:
+      - edge-stream-dev-network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin-dev
+    ports:
+      - "8082:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@edgestream.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+    depends_on:
+      - postgres-dev
+    networks:
+      - edge-stream-dev-network
+    restart: unless-stopped
+
+volumes:
+  redis_dev_data:
+    driver: local
+  postgres_dev_data:
+    driver: local
+  pgadmin_dev_data:
+    driver: local
+  go_modules:
+    driver: local
+
+networks:
+  edge-stream-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

@@ -1,0 +1,178 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+    
+    - name: Run go mod tidy check
+      run: |
+        go mod tidy
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "go mod tidy resulted in changes:"
+          git diff
+          exit 1
+        fi
+
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    
+    - name: Check gofmt
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "The following files are not formatted properly:"
+          gofmt -s -l .
+          echo "Please run 'gofmt -s -w .' to fix formatting issues."
+          exit 1
+        fi
+    
+    - name: Check goimports
+      run: |
+        go install golang.org/x/tools/cmd/goimports@latest
+        if [ "$(goimports -l . | wc -l)" -gt 0 ]; then
+          echo "The following files have import issues:"
+          goimports -l .
+          echo "Please run 'goimports -w .' to fix import issues."
+          exit 1
+        fi
+
+  vulnerability:
+    name: Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    
+    - name: Run govulncheck
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+    
+    - name: Run Nancy (OSS Index)
+      run: |
+        go list -json -deps ./... | docker run --rm -i sonatypecommunity/nancy:latest sleuth
+
+  complexity:
+    name: Code Complexity
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    
+    - name: Install gocyclo
+      run: go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+    
+    - name: Check cyclomatic complexity
+      run: |
+        gocyclo -over 15 .
+        if [ $? -eq 0 ]; then
+          echo "✅ All functions have acceptable cyclomatic complexity"
+        else
+          echo "❌ Some functions have high cyclomatic complexity (>15)"
+          exit 1
+        fi
+    
+    - name: Install gocognit
+      run: go install github.com/uudashr/gocognit/cmd/gocognit@latest
+    
+    - name: Check cognitive complexity
+      run: |
+        gocognit -over 20 .
+        if [ $? -eq 0 ]; then
+          echo "✅ All functions have acceptable cognitive complexity"
+        else
+          echo "❌ Some functions have high cognitive complexity (>20)"
+          exit 1
+        fi
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.21
+    
+    - name: Check for missing documentation
+      run: |
+        go install github.com/johnkerl/godoctor@latest
+        # Check for exported functions without comments
+        missing_docs=$(go doc -all ./... 2>&1 | grep -c "undocumented exported" || true)
+        if [ $missing_docs -gt 0 ]; then
+          echo "❌ Found $missing_docs undocumented exported functions"
+          go doc -all ./... 2>&1 | grep "undocumented exported"
+          exit 1
+        else
+          echo "✅ All exported functions are documented"
+        fi
+    
+    - name: Generate and check Go documentation
+      run: |
+        go install golang.org/x/tools/cmd/godoc@latest
+        timeout 10s godoc -http=:6060 &
+        sleep 5
+        curl -f http://localhost:6060/pkg/github.com/edgestream/edge-stream/ > /dev/null
+        echo "✅ Go documentation generated successfully"
+
+  license:
+    name: License Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Check license headers
+      run: |
+        # Check if all Go files have license headers
+        missing_license=$(find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \; | wc -l)
+        if [ $missing_license -gt 0 ]; then
+          echo "❌ Found $missing_license Go files without license headers:"
+          find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \;
+          echo "Please add license headers to all Go files."
+          exit 1
+        else
+          echo "✅ All Go files have license headers"
+        fi

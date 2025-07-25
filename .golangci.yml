@@ -1,0 +1,283 @@
+# golangci-lint configuration
+run:
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  skip-dirs:
+    - vendor
+    - tmp
+    - bin
+    - test-results
+  skip-files:
+    - ".*\.pb\.go$"
+    - ".*_generated\.go$"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true
+
+linters-settings:
+  dupl:
+    threshold: 100
+  
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  
+  exhaustive:
+    check-generated: false
+    default-signifies-exhaustive: false
+  
+  funlen:
+    lines: 100
+    statements: 50
+  
+  gocognit:
+    min-complexity: 20
+  
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+  
+  gocyclo:
+    min-complexity: 15
+  
+  godot:
+    scope: declarations
+    exclude:
+      - "^fixme:"
+      - "^todo:"
+    period: true
+    capital: false
+  
+  gofmt:
+    simplify: true
+  
+  goimports:
+    local-prefixes: github.com/edgestream/edge-stream
+  
+  golint:
+    min-confidence: 0
+  
+  gomnd:
+    settings:
+      mnd:
+        checks:
+          - argument
+          - case
+          - condition
+          - operation
+          - return
+        ignored-numbers: 0,1,2,3
+        ignored-functions: strings.SplitN
+  
+  gomodguard:
+    allowed:
+      modules:
+        - gopkg.in/yaml.v3
+        - github.com/stretchr/testify
+        - github.com/go-redis/redis/v8
+        - github.com/lib/pq
+        - github.com/prometheus/client_golang
+    blocked:
+      modules:
+        - github.com/uudashr/go-module:
+            recommendations:
+              - golang.org/x/mod
+            reason: "`mod` is the official go.mod parser library."
+  
+  govet:
+    check-shadowing: true
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+  
+  lll:
+    line-length: 140
+  
+  maligned:
+    suggest-new: true
+  
+  misspell:
+    locale: US
+  
+  nakedret:
+    max-func-lines: 30
+  
+  nestif:
+    min-complexity: 4
+  
+  nolintlint:
+    allow-leading-space: true
+    allow-unused: false
+    require-explanation: false
+    require-specific: false
+  
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  
+  predeclared:
+    ignore: ""
+    q: false
+  
+  revive:
+    min-confidence: 0
+    rules:
+      - name: atomic
+      - name: line-length-limit
+        arguments: [140]
+      - name: argument-limit
+        arguments: [8]
+      - name: cyclomatic
+        arguments: [15]
+      - name: max-public-structs
+        arguments: [10]
+      - name: file-header
+        arguments:
+          - "Copyright \\d{4} EdgeStream Team"
+  
+  rowserrcheck:
+    packages:
+      - github.com/jmoiron/sqlx
+  
+  testpackage:
+    skip-regexp: (export|internal)_test\.go
+  
+  unparam:
+    check-exported: false
+  
+  unused:
+    check-exported: false
+  
+  whitespace:
+    multi-if: false
+    multi-func: false
+  
+  wsl:
+    strict-append: true
+    allow-assign-and-call: true
+    allow-multiline-assign: true
+    allow-cuddle-declarations: false
+    allow-trailing-comment: false
+    force-case-trailing-whitespace: 0
+    force-err-cuddling: false
+    allow-separated-leading-comment: false
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - funlen
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - gomnd
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    - lll
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - scopelint
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    - whitespace
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gomnd
+        - funlen
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+    
+    - path: examples/
+      linters:
+        - gomnd
+        - funlen
+        - gocyclo
+    
+    - path: internal/
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+    
+    - linters:
+        - lll
+      source: "^//go:generate "
+  
+  exclude-use-default: false
+  exclude:
+    - 'declaration of "err" shadows declaration at'
+    - 'declaration of "ctx" shadows declaration at'
+  
+  max-issues-per-linter: 50
+  max-same-issues: 3
+  new: false
+  new-from-rev: ""
+  new-from-patch: ""
+  whole-files: false
+  fix: false
+
+severity:
+  default-severity: error
+  case-sensitive: false
+  rules:
+    - linters:
+        - dupl
+      severity: info
+    - linters:
+        - gomnd
+      severity: info
