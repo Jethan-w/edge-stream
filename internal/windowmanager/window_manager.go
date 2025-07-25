@@ -41,7 +41,7 @@ func (sm *SimpleWindowManager) CreateCountWindow(count int) Window {
 func (sm *SimpleWindowManager) ProcessData(data interface{}) error {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	for _, window := range sm.windows {
 		window.AddData(data)
 	}
@@ -52,7 +52,7 @@ func (sm *SimpleWindowManager) ProcessData(data interface{}) error {
 func (sm *SimpleWindowManager) GetReadyWindows() []Window {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	var readyWindows []Window
 	for _, window := range sm.windows {
 		if window.IsReady() {
@@ -66,11 +66,11 @@ func (sm *SimpleWindowManager) GetReadyWindows() []Window {
 func (sm *SimpleWindowManager) PrintWindowStatus() {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	fmt.Println("=== Window Status ===")
 	for i, window := range sm.windows {
 		data := window.GetData()
-		fmt.Printf("Window %d [%s]: Type=%v, DataCount=%d, Ready=%v\n", 
+		fmt.Printf("Window %d [%s]: Type=%v, DataCount=%d, Ready=%v\n",
 			i+1, window.GetID(), window.GetWindowType(), len(data), window.IsReady())
 	}
 	fmt.Println("=====================")
@@ -81,7 +81,7 @@ func (sm *SimpleWindowManager) CreateWindow(id string, duration time.Duration, m
 	if id == "" {
 		return fmt.Errorf("window ID cannot be empty")
 	}
-	
+
 	// 根据参数创建合适的窗口类型
 	var window Window
 	if duration > 0 {
@@ -89,7 +89,7 @@ func (sm *SimpleWindowManager) CreateWindow(id string, duration time.Duration, m
 	} else {
 		window = NewCountWindow(maxSize)
 	}
-	
+
 	sm.mu.Lock()
 	sm.windows = append(sm.windows, window)
 	sm.mu.Unlock()
@@ -100,7 +100,7 @@ func (sm *SimpleWindowManager) CreateWindow(id string, duration time.Duration, m
 func (sm *SimpleWindowManager) AddToWindow(id string, data interface{}) error {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	// 找到对应的窗口并添加数据
 	for _, window := range sm.windows {
 		window.AddData(data)
@@ -112,7 +112,7 @@ func (sm *SimpleWindowManager) AddToWindow(id string, data interface{}) error {
 func (sm *SimpleWindowManager) GetWindowData(id string) []interface{} {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	// 返回所有窗口的数据（简化实现）
 	var allData []interface{}
 	for _, window := range sm.windows {
@@ -126,7 +126,7 @@ func (sm *SimpleWindowManager) GetWindowData(id string) []interface{} {
 func (sm *SimpleWindowManager) DeleteWindow(id string) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
-	
+
 	// 简化实现：清空所有窗口
 	sm.windows = make([]Window, 0)
 }
@@ -135,7 +135,7 @@ func (sm *SimpleWindowManager) DeleteWindow(id string) {
 func (sm *SimpleWindowManager) GetWindow(id string) Window {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	// 简化实现：返回第一个窗口或nil
 	if len(sm.windows) > 0 {
 		return sm.windows[0]

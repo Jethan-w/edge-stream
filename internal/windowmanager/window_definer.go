@@ -8,20 +8,20 @@ import (
 
 // TimeWindow 时间窗口
 type TimeWindow struct {
-	id       string
-	duration time.Duration
+	id        string
+	duration  time.Duration
 	startTime time.Time
-	data     []interface{}
-	mu       sync.RWMutex
+	data      []interface{}
+	mu        sync.RWMutex
 }
 
 // NewTimeWindow 创建时间窗口
 func NewTimeWindow(duration time.Duration) *TimeWindow {
 	return &TimeWindow{
-		id:       fmt.Sprintf("time-window-%d", time.Now().UnixNano()),
-		duration: duration,
+		id:        fmt.Sprintf("time-window-%d", time.Now().UnixNano()),
+		duration:  duration,
 		startTime: time.Now(),
-		data:     make([]interface{}, 0),
+		data:      make([]interface{}, 0),
 	}
 }
 

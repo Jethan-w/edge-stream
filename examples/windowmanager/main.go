@@ -26,16 +26,16 @@ func main() {
 	for i := 1; i <= 5; i++ {
 		data := fmt.Sprintf("数据-%d", i)
 		fmt.Printf("添加数据: %s\n", data)
-		
+
 		// 处理数据
 		if err := manager.ProcessData(data); err != nil {
 			fmt.Printf("处理数据失败: %v\n", err)
 			continue
 		}
-		
+
 		// 打印窗口状态
 		manager.PrintWindowStatus()
-		
+
 		// 检查准备好的窗口
 		readyWindows := manager.GetReadyWindows()
 		if len(readyWindows) > 0 {
@@ -48,7 +48,7 @@ func main() {
 				fmt.Printf("  窗口 %s 已重置\n", window.GetID())
 			}
 		}
-		
+
 		fmt.Println("---")
 		time.Sleep(1 * time.Second)
 	}

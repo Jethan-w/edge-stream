@@ -8,7 +8,7 @@ import (
 type Processor interface {
 	// Process 处理数据
 	Process(flowFile *flowfile.FlowFile) (*flowfile.FlowFile, error)
-	
+
 	// GetName 获取处理器名称
 	GetName() string
 }

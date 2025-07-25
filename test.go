@@ -63,7 +63,7 @@ func runCoverage() {
 
 func runBenchmark() {
 	fmt.Println("运行性能基准测试...")
-	
+
 	// 切换到 internal/performance 目录
 	originalDir, _ := os.Getwd()
 	perfDir := filepath.Join(originalDir, "internal", "performance")
@@ -72,13 +72,13 @@ func runBenchmark() {
 		fmt.Printf("无法切换到目录 %s: %v\n", perfDir, err)
 		os.Exit(1)
 	}
-	
+
 	// 运行基准测试
 	err = runCommand("go", "test", "-bench=BenchmarkConfigManager|BenchmarkMetricsCollector|BenchmarkStateManager", "-benchmem", "-run=^$", "-timeout", "10m", "-v")
-	
+
 	// 切换回原目录
 	os.Chdir(originalDir)
-	
+
 	if err != nil {
 		fmt.Println("基准测试失败!")
 		os.Exit(1)
@@ -99,18 +99,18 @@ func runBuild() {
 func runAll() {
 	fmt.Println("运行所有测试...")
 	fmt.Println("")
-	
+
 	fmt.Println("[1/3] 运行覆盖率测试...")
 	runCoverage()
 	fmt.Println("")
-	
+
 	fmt.Println("[2/3] 运行性能基准测试...")
 	runBenchmark()
 	fmt.Println("")
-	
+
 	fmt.Println("[3/3] 运行构建检查...")
 	runBuild()
 	fmt.Println("")
-	
+
 	fmt.Println("所有测试完成!")
 }

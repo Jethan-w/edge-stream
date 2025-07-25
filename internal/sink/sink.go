@@ -9,7 +9,7 @@ import (
 type Sink interface {
 	// Write 写入数据
 	Write(flowFile *flowfile.FlowFile) error
-	
+
 	// GetName 获取输出器名称
 	GetName() string
 }
@@ -33,7 +33,7 @@ func (ss *SimpleSink) Write(flowFile *flowfile.FlowFile) error {
 	if flowFile == nil {
 		return fmt.Errorf("flowFile cannot be nil")
 	}
-	
+
 	ss.data = append(ss.data, flowFile)
 	return nil
 }
@@ -70,8 +70,8 @@ func (cs *ConsoleSink) Write(flowFile *flowfile.FlowFile) error {
 	if flowFile == nil {
 		return fmt.Errorf("flowFile cannot be nil")
 	}
-	
-	fmt.Printf("[%s] FlowFile ID: %s, Size: %d bytes, Content: %s\n", 
+
+	fmt.Printf("[%s] FlowFile ID: %s, Size: %d bytes, Content: %s\n",
 		cs.name, flowFile.UUID, flowFile.Size, string(flowFile.Content))
 	return nil
 }
