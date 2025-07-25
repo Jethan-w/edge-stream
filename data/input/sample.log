@@ -1,5 +1,0 @@
-{"timestamp":"2024-01-01T10:00:00Z","level":"INFO","message":"Application started"}
-{"timestamp":"2024-01-01T10:00:01Z","level":"DEBUG","message":"Processing request"}
-{"timestamp":"2024-01-01T10:00:02Z","level":"WARN","message":"High memory usage detected"}
-{"timestamp":"2024-01-01T10:00:03Z","level":"ERROR","message":"Database connection failed"}
-{"timestamp":"2024-01-01T10:00:04Z","level":"INFO","message":"Request completed successfully"}

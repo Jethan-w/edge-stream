@@ -1,0 +1,104 @@
+# Edge Stream 配置文件示例
+
+# 数据库配置
+database:
+  mysql:
+    host: localhost
+    port: 3306
+    username: root
+    password: secret123  # 敏感数据，将被自动加密
+    database: edge_stream
+    charset: utf8mb4
+    max_open_conns: 20
+    max_idle_conns: 10
+    timeout: 30s
+  
+  postgresql:
+    host: localhost
+    port: 5432
+    username: postgres
+    password: postgres123  # 敏感数据
+    database: edge_stream
+    ssl_mode: disable
+    max_open_conns: 20
+    max_idle_conns: 10
+    timeout: 30s
+
+# Redis配置
+redis:
+  host: localhost
+  port: 6379
+  password: ""  # 空密码
+  database: 0
+  pool_size: 10
+  timeout: 5s
+
+# 服务器配置
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 30s
+  write_timeout: 30s
+  idle_timeout: 60s
+  max_header_bytes: 1048576  # 1MB
+
+# 数据处理配置
+processing:
+  batch_size: 1000
+  worker_count: 4
+  buffer_size: 10000
+  output_path: "./data/output"
+  file_format: csv
+  compression: false
+  retry_attempts: 3
+  retry_delay: 5s
+
+# 监控配置
+monitoring:
+  enabled: true
+  collection_interval: 30s
+  retention_period: 24h
+  export_format: json
+  export_path: "./metrics"
+  auto_export: false
+  
+  # HTTP服务器配置
+  http_server:
+    enabled: true
+    address: 0.0.0.0
+    port: 9090
+    metrics_path: "/metrics"
+    health_path: "/health"
+
+# 日志配置
+logging:
+  level: info
+  format: json
+  output: stdout
+  file_path: "./logs/edge-stream.log"
+  max_size: 100  # MB
+  max_backups: 5
+  max_age: 30  # days
+  compress: true
+
+# 安全配置
+security:
+  encryption:
+    enabled: true
+    algorithm: aes-256-gcm
+    key_rotation_interval: 24h
+  
+  api:
+    rate_limit: 1000  # requests per minute
+    timeout: 30s
+    cors_enabled: true
+    cors_origins:
+      - "http://localhost:3000"
+      - "https://dashboard.example.com"
+
+# 特性开关
+features:
+  enable_metrics: true
+  enable_tracing: false
+  enable_profiling: false
+  enable_debug_endpoints: false

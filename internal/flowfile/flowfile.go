@@ -40,6 +40,21 @@ func GenerateLineageID() string {
 	return fmt.Sprintf("lineage-%d", time.Now().UnixNano())
 }
 
+// SetAttribute 设置属性
+func (f *FlowFile) SetAttribute(key, value string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.Attributes[key] = value
+}
+
+// GetAttribute 获取属性
+func (f *FlowFile) GetAttribute(key string) (string, bool) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	value, exists := f.Attributes[key]
+	return value, exists
+}
+
 // ValidateFlowFile 验证 FlowFile
 func (f *FlowFile) ValidateFlowFile() error {
 	if f == nil {

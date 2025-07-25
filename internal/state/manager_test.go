@@ -1,0 +1,399 @@
+package state
+
+import (
+	"fmt"
+	"sync"
+	"testing"
+	"time"
+)
+
+// MemoryCheckpointManager 内存检查点管理器（仅用于测试）
+type MemoryCheckpointManager struct {
+	mu          sync.RWMutex
+	checkpoints map[string]map[string]interface{}
+}
+
+// CreateCheckpoint 创建检查点
+func (m *MemoryCheckpointManager) CreateCheckpoint(processorID string, data map[string]interface{}) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.checkpoints[processorID] = data
+	return nil
+}
+
+// RestoreCheckpoint 恢复检查点
+func (m *MemoryCheckpointManager) RestoreCheckpoint(processorID string) (map[string]interface{}, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if data, exists := m.checkpoints[processorID]; exists {
+		return data, nil
+	}
+	return nil, fmt.Errorf("checkpoint not found for processor %s", processorID)
+}
+
+// ListCheckpoints 列出检查点
+func (m *MemoryCheckpointManager) ListCheckpoints() []string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	var keys []string
+	for key := range m.checkpoints {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// DeleteCheckpoint 删除检查点
+func (m *MemoryCheckpointManager) DeleteCheckpoint(processorID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, exists := m.checkpoints[processorID]; !exists {
+		return fmt.Errorf("checkpoint not found for processor %s", processorID)
+	}
+	delete(m.checkpoints, processorID)
+	return nil
+}
+
+func TestMemoryStateManager(t *testing.T) {
+	sm := NewStandardStateManager(nil)
+
+	// 测试基本的状态操作
+	t.Run("BasicOperations", func(t *testing.T) {
+		key := "test_key"
+		value := "test_value"
+
+		// 测试设置状态
+		state, err := sm.CreateState("test_state", StateTypeMemory)
+		if err != nil {
+			t.Errorf("CreateState failed: %v", err)
+		}
+		err = state.Set(key, value)
+		if err != nil {
+			t.Errorf("Set failed: %v", err)
+		}
+
+		// 测试获取状态
+		retrievedValue, exists := state.Get(key)
+		if !exists {
+			t.Errorf("Get failed: key not found")
+		}
+		if retrievedValue != value {
+			t.Errorf("Expected %s, got %s", value, retrievedValue)
+		}
+
+		// 测试状态存在性检查
+		exists = state.Exists(key)
+		if !exists {
+			t.Error("Expected state to exist")
+		}
+
+		// 测试删除状态
+		err = state.Delete(key)
+		if err != nil {
+			t.Errorf("Delete failed: %v", err)
+		}
+
+		// 验证状态已删除
+		exists = state.Exists(key)
+		if exists {
+			t.Error("Expected state to be deleted")
+		}
+	})
+
+	// 测试不存在的键
+	t.Run("NonExistentKey", func(t *testing.T) {
+		state, _ := sm.CreateState("test_state2", StateTypeMemory)
+		_, exists := state.Get("nonexistent")
+		if exists {
+			t.Error("Expected false for nonexistent key")
+		}
+
+		exists = state.Exists("nonexistent")
+		if exists {
+			t.Error("Expected nonexistent key to return false")
+		}
+	})
+
+	// 测试清空所有状态
+	t.Run("ClearAll", func(t *testing.T) {
+		state, _ := sm.CreateState("test_state3", StateTypeMemory)
+		// 添加一些状态
+		state.Set("key1", "value1")
+		state.Set("key2", "value2")
+		state.Set("key3", "value3")
+
+		// 清空所有状态
+		err := state.Clear()
+		if err != nil {
+			t.Errorf("Clear failed: %v", err)
+		}
+
+		// 验证所有状态都被清空
+		if state.Exists("key1") || state.Exists("key2") || state.Exists("key3") {
+			t.Error("Expected all states to be cleared")
+		}
+	})
+}
+
+func TestStateManagerConcurrency(t *testing.T) {
+	sm := NewStandardStateManager(nil)
+
+	// 并发读写测试
+	t.Run("ConcurrentReadWrite", func(t *testing.T) {
+		var wg sync.WaitGroup
+		numGoroutines := 10
+		numOperations := 100
+
+		// 并发写入
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				for j := 0; j < numOperations; j++ {
+					key := fmt.Sprintf("key_%d_%d", id, j)
+					value := fmt.Sprintf("value_%d_%d", id, j)
+					state, _ := sm.CreateState(fmt.Sprintf("state_%d_%d", id, j), StateTypeMemory)
+					state.Set(key, value)
+				}
+			}(i)
+		}
+
+		// 并发读取
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				for j := 0; j < numOperations; j++ {
+					key := fmt.Sprintf("key_%d_%d", id, j)
+					if state, exists := sm.GetState(fmt.Sprintf("state_%d_%d", id, j)); exists {
+						state.Get(key)
+						state.Exists(key)
+					}
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	})
+
+	// 并发删除测试
+	t.Run("ConcurrentDelete", func(t *testing.T) {
+		// 预先设置一些状态
+		states := make([]State, 100)
+		for i := 0; i < 100; i++ {
+			key := fmt.Sprintf("delete_key_%d", i)
+			state, _ := sm.CreateState(fmt.Sprintf("delete_state_%d", i), StateTypeMemory)
+			state.Set(key, "value")
+			states[i] = state
+		}
+
+		var wg sync.WaitGroup
+		// 并发删除
+		for i := 0; i < 100; i++ {
+			wg.Add(1)
+			go func(id int) {
+				defer wg.Done()
+				key := fmt.Sprintf("delete_key_%d", id)
+				if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", id)); exists {
+					state.Delete(key)
+				}
+			}(i)
+		}
+
+		wg.Wait()
+
+		// 验证所有状态都被删除
+		for i := 0; i < 100; i++ {
+			key := fmt.Sprintf("delete_key_%d", i)
+			if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", i)); exists {
+				if state.Exists(key) {
+					t.Errorf("Expected key %s to be deleted", key)
+				}
+			}
+		}
+	})
+}
+
+func TestCheckpointManager(t *testing.T) {
+	// 创建一个简单的内存检查点管理器用于测试
+	manager := &MemoryCheckpointManager{
+		checkpoints: make(map[string]map[string]interface{}),
+	}
+
+	// 测试检查点创建和恢复
+	t.Run("CreateAndRestore", func(t *testing.T) {
+		processorID := "test_processor"
+		checkpointData := map[string]interface{}{
+			"processed_count": 100,
+			"last_timestamp":  time.Now().Unix(),
+			"status":          "running",
+		}
+
+		// 创建检查点
+		err := manager.CreateCheckpoint(processorID, checkpointData)
+		if err != nil {
+			t.Errorf("CreateCheckpoint failed: %v", err)
+		}
+
+		// 恢复检查点
+		restoredData, err := manager.RestoreCheckpoint(processorID)
+		if err != nil {
+			t.Errorf("RestoreCheckpoint failed: %v", err)
+		}
+
+		// 验证数据
+		if restoredData["processed_count"] != checkpointData["processed_count"] {
+			t.Error("Checkpoint data mismatch")
+		}
+		if restoredData["status"] != checkpointData["status"] {
+			t.Error("Checkpoint status mismatch")
+		}
+	})
+
+	// 测试检查点列表
+	t.Run("ListCheckpoints", func(t *testing.T) {
+		// 创建多个检查点
+		for i := 0; i < 5; i++ {
+			processorID := fmt.Sprintf("processor_%d", i)
+			checkpointData := map[string]interface{}{"id": i}
+			manager.CreateCheckpoint(processorID, checkpointData)
+		}
+
+		checkpoints := manager.ListCheckpoints()
+		if len(checkpoints) < 5 {
+			t.Errorf("Expected at least 5 checkpoints, got %d", len(checkpoints))
+		}
+	})
+
+	// 测试检查点删除
+	t.Run("DeleteCheckpoint", func(t *testing.T) {
+		processorID := "delete_test_processor"
+		checkpointData := map[string]interface{}{"test": "data"}
+
+		// 创建检查点
+		manager.CreateCheckpoint(processorID, checkpointData)
+
+		// 验证检查点存在
+		_, err := manager.RestoreCheckpoint(processorID)
+		if err != nil {
+			t.Error("Checkpoint should exist before deletion")
+		}
+
+		// 删除检查点
+		err = manager.DeleteCheckpoint(processorID)
+		if err != nil {
+			t.Errorf("DeleteCheckpoint failed: %v", err)
+		}
+
+		// 验证检查点已删除
+		_, err = manager.RestoreCheckpoint(processorID)
+		if err == nil {
+			t.Error("Expected error when restoring deleted checkpoint")
+		}
+	})
+}
+
+func BenchmarkStateManager(b *testing.B) {
+	sm := NewStandardStateManager(nil)
+	state, _ := sm.CreateState("bench_state", StateTypeMemory)
+
+	b.Run("SetState", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("bench_key_%d", i)
+			state.Set(key, "benchmark_value")
+		}
+	})
+
+	b.Run("GetState", func(b *testing.B) {
+		// 预先设置一些状态
+		for i := 0; i < 1000; i++ {
+			key := fmt.Sprintf("get_bench_key_%d", i)
+			state.Set(key, "value")
+		}
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("get_bench_key_%d", i%1000)
+			state.Get(key)
+		}
+	})
+
+	b.Run("HasState", func(b *testing.B) {
+		// 预先设置一些状态
+		for i := 0; i < 1000; i++ {
+			key := fmt.Sprintf("has_bench_key_%d", i)
+			state.Set(key, "value")
+		}
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			key := fmt.Sprintf("has_bench_key_%d", i%1000)
+			state.Exists(key)
+		}
+	})
+}
+
+// 性能标准测试
+func TestStateManagerPerformanceStandards(t *testing.T) {
+	sm := NewStandardStateManager(nil)
+	state, _ := sm.CreateState("perf_state", StateTypeMemory)
+
+	// 测试单次操作性能
+	t.Run("SingleOperationPerformance", func(t *testing.T) {
+		start := time.Now()
+		state.Set("perf_test", "value")
+		duration := time.Since(start)
+
+		// 单次操作应该在100μs内完成
+		if duration > 100*time.Microsecond {
+			t.Errorf("Single Set took %v, expected < 100μs", duration)
+		}
+
+		start = time.Now()
+		state.Get("perf_test")
+		duration = time.Since(start)
+
+		// 单次获取应该在50μs内完成
+		if duration > 50*time.Microsecond {
+			t.Errorf("Single Get took %v, expected < 50μs", duration)
+		}
+	})
+
+	// 测试批量操作性能
+	t.Run("BatchOperationPerformance", func(t *testing.T) {
+		numOps := 10000
+		start := time.Now()
+
+		for i := 0; i < numOps; i++ {
+			key := fmt.Sprintf("batch_key_%d", i)
+			state.Set(key, "value")
+		}
+
+		duration := time.Since(start)
+		opsPerSecond := float64(numOps) / duration.Seconds()
+
+		// 应该能够处理至少500,000 ops/sec
+		if opsPerSecond < 500000 {
+			t.Errorf("Batch Set: %.0f ops/sec, expected >= 500,000 ops/sec", opsPerSecond)
+		}
+	})
+
+	// 测试内存使用效率
+	t.Run("MemoryEfficiency", func(t *testing.T) {
+		// 存储大量状态
+		numStates := 100000
+		for i := 0; i < numStates; i++ {
+			key := fmt.Sprintf("memory_test_%d", i)
+			value := fmt.Sprintf("value_%d", i)
+			state.Set(key, value)
+		}
+
+		// 验证所有状态都能正确访问
+		for i := 0; i < 1000; i++ { // 抽样检查
+			key := fmt.Sprintf("memory_test_%d", i*100)
+			if !state.Exists(key) {
+				t.Errorf("State %s should exist", key)
+			}
+		}
+	})
+}

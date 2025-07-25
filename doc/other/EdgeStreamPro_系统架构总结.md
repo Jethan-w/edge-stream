@@ -1,4 +1,4 @@
-# EdgeStream Pro 系统架构总结
+# EdgeStream Pro 系统架构设计文档
 
 ## 1. 系统架构概览
 
@@ -19,6 +19,138 @@ graph TD
     P --> PR[Processor 数据处理器]
     P --> SI[Sink 数据接收器]
     P --> WM[WindowManager 窗口管理]
+    end
+```
+
+### 1.2 系统类图
+
+```mermaid
+classDiagram
+    class StreamEngine {
+        +config: Config
+        +pipeline: Pipeline
+        +stateManager: StateManager
+        +metricCollector: MetricCollector
+        +Start() error
+        +Stop() error
+        +GetMetrics() MetricSnapshot
+        +ReloadConfig(config Config) error
+    }
+
+    class Pipeline {
+        +sources: []Source
+        +processors: []Processor
+        +sinks: []Sink
+        +windowManager: WindowManager
+        +AddSource(source Source) error
+        +AddProcessor(processor Processor) error
+        +AddSink(sink Sink) error
+        +Process(ctx context.Context) error
+        +GetTopology() Topology
+    }
+
+    class Source {
+        <<interface>>
+        +Connect() error
+        +Read(ctx context.Context) <-chan Record
+        +Close() error
+        +GetConfig() SourceConfig
+    }
+
+    class Processor {
+        <<interface>>
+        +Process(record Record) ([]Record, error)
+        +ProcessBatch(records []Record) ([]Record, error)
+        +GetConfig() ProcessorConfig
+        +Initialize(config ProcessorConfig) error
+    }
+
+    class Sink {
+        <<interface>>
+        +Connect() error
+        +Write(record Record) error
+        +WriteBatch(records []Record) error
+        +Close() error
+        +GetConfig() SinkConfig
+    }
+
+    StreamEngine --> Pipeline
+    StreamEngine --> StateManager
+    StreamEngine --> MetricCollector
+    Pipeline --> Source
+    Pipeline --> Processor
+    Pipeline --> Sink
+    Pipeline --> WindowManager
+```
+
+### 1.3 数据处理流程序列图
+
+```mermaid
+sequenceDiagram
+    participant M as Main
+    participant SE as StreamEngine
+    participant CM as ConfigManager
+    participant P as Pipeline
+    participant S as Source
+    participant PR as Processor
+    participant WM as WindowManager
+    participant SI as Sink
+    participant SM as StateManager
+    participant MC as MetricCollector
+
+    M->>CM: LoadConfig("config.yaml")
+    CM-->>M: Config
+    M->>SE: NewStreamEngine(config)
+    SE->>SM: Initialize(stateConfig)
+    SE->>MC: Initialize(metricConfig)
+    SE->>P: NewPipeline(pipelineConfig)
+    
+    M->>SE: Start()
+    SE->>P: Initialize()
+    P->>S: Connect()
+    S-->>P: Connection established
+    P->>SI: Connect()
+    SI-->>P: Connection established
+    P->>WM: Initialize(windowConfigs)
+    
+    SE->>P: Process(ctx)
+    
+    loop Main Processing Loop
+        P->>S: Read(ctx)
+        S-->>P: Record
+        P->>PR: Process(record)
+        PR-->>P: ProcessedRecords
+        
+        P->>WM: ProcessRecord(record)
+        WM->>SI: Write(windowResult)
+        
+        P->>SI: Write(processedRecord)
+        SI-->>P: WriteAck
+        
+        P->>MC: RecordLatency(duration)
+        P->>MC: RecordThroughput(1)
+    end
+    
+    alt Error Handling
+        PR-->>P: ProcessingError
+        P->>MC: RecordError("processing")
+        P->>SI: Write(errorRecord)
+    end
+    
+    alt Hot Reload
+        CM->>SE: ConfigChanged(newConfig)
+        SE->>P: UpdateConfig(newConfig)
+        P->>PR: Reconfigure(processorConfig)
+        P->>WM: UpdateWindows(windowConfig)
+    end
+    
+    alt Shutdown
+        M->>SE: Stop()
+        SE->>P: Stop()
+        P->>S: Close()
+        P->>SI: Close()
+        SE->>SM: CreateCheckpoint()
+        SE->>MC: Flush()
     end
 ```
 
@@ -352,4 +484,4 @@ type ConnectorRegistry interface {
 
 ## 5. 总结
 
-EdgeStream Pro通过精心设计的模块化架构，提供了一个轻量、高性能、可扩展的边缘计算流处理解决方案。各模块协同工作，确保系统在资源受限环境中也能高效、可靠地处理数据。 
+EdgeStream Pro通过精心设计的模块化架构，提供了一个轻量、高性能、可扩展的边缘计算流处理解决方案。各模块协同工作，确保系统在资源受限环境中也能高效、可靠地处理数据。
