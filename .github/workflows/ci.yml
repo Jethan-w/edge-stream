@@ -173,7 +173,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
     
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       if: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
       with:
         context: .
@@ -186,7 +186,7 @@ jobs:
         cache-to: type=gha,mode=max
     
     - name: Build Docker image (no push)
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       if: ${{ secrets.DOCKER_USERNAME == '' || secrets.DOCKER_PASSWORD == '' }}
       with:
         context: .
