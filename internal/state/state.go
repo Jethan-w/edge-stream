@@ -252,7 +252,7 @@ func (sm *StateMetrics) IncrementError() {
 func (sm *StateMetrics) GetMetrics() StateMetrics {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	
+
 	// 返回不包含锁的副本
 	return StateMetrics{
 		StateCount:         sm.StateCount,
