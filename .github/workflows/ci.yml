@@ -53,5 +53,15 @@ jobs:
     - name: Run benchmarks
       run: go test -bench=. -benchmem ./internal/performance/
     
-    - name: Build
-      run: go build -v ./...
+    - name: Build for multiple platforms
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o bin/edge-stream-linux-amd64 ./examples/complete/
+        GOOS=windows GOARCH=amd64 go build -o bin/edge-stream-windows-amd64.exe ./examples/complete/
+        GOOS=darwin GOARCH=amd64 go build -o bin/edge-stream-darwin-amd64 ./examples/complete/
+        GOOS=darwin GOARCH=arm64 go build -o bin/edge-stream-darwin-arm64 ./examples/complete/
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: edge-stream-binaries
+        path: bin/
