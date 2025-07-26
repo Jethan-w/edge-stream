@@ -156,7 +156,7 @@ func cleanupTopology(t *testing.T, engine *StandardStreamEngine, topology *Strea
 		if err := engine.StopTopology(ctx, topology.ID); err != nil {
 			t.Logf("Failed to stop topology: %v", err)
 		}
-		}
+	}
 }
 
 func TestStreamEngineErrorRecovery(t *testing.T) {

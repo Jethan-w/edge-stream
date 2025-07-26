@@ -239,8 +239,8 @@ func (c *FileSourceConnector) sendMessage(ctx context.Context, msgCh chan Messag
 	case msgCh <- msg:
 		atomic.AddInt64(&c.metrics.MessagesProcessed, 1)
 		if value, ok := msg.GetValue().(string); ok {
-                    atomic.AddInt64(&c.metrics.BytesProcessed, int64(len(value)))
-                }
+			atomic.AddInt64(&c.metrics.BytesProcessed, int64(len(value)))
+		}
 		return true
 	case <-ctx.Done():
 		return false
