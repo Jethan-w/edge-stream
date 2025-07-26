@@ -43,12 +43,13 @@ func main() {
 	displayTopologyInfo(engine)
 
 	// 启动流处理
-	ctx := startStreamProcessing(engine)
+	ctx, cancel := startStreamProcessing(engine)
+	defer cancel() // 确保在函数退出时调用cancel
 
-	// 运行监控和指标显示
+	// 运行监控
 	runStreamMonitoring(ctx, engine)
 
-	// 等待中断信号并停止
+	// 等待停止信号
 	stopStreamProcessing(ctx, engine)
 
 	// 清理资源
@@ -202,10 +203,10 @@ func displayTopologyInfo(engine *stream.StandardStreamEngine) {
 }
 
 // startStreamProcessing 启动流处理
-func startStreamProcessing(engine *stream.StandardStreamEngine) context.Context {
+func startStreamProcessing(engine *stream.StandardStreamEngine) (context.Context, context.CancelFunc) {
 	// 启动事件监听
 	fmt.Println("\n=== 启动事件监听 ===")
-	ctx, _ := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	go func() {
 		eventChan := engine.GetEventChannel()
@@ -226,7 +227,7 @@ func startStreamProcessing(engine *stream.StandardStreamEngine) context.Context 
 	status, _ := engine.GetTopologyStatus("demo-topology")
 	fmt.Printf("拓扑状态: %s\n", status)
 
-	return ctx
+	return ctx, cancel
 }
 
 // runStreamMonitoring 运行监控和指标显示
