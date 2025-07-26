@@ -38,9 +38,7 @@ func main() {
 	fmt.Println("\n=== Prometheus格式导出 ===")
 	exportPrometheus(collector)
 
-	// 8. 获取指标快照
-	fmt.Println("\n=== 指标快照 ===")
-	getSnapshot(collector)
+
 
 	fmt.Println("\n=== 监控系统示例完成 ===")
 }
@@ -155,22 +153,7 @@ func exportPrometheus(collector metrics.MetricCollector) {
 		truncateString(string(prometheusData), 800))
 }
 
-// getSnapshot 获取指标快照
-func getSnapshot(collector metrics.MetricCollector) {
-	if standardCollector, ok := collector.(*metrics.StandardMetricCollector); ok {
-		snapshot := standardCollector.GetSnapshot()
-		fmt.Printf("快照时间: %s\n", snapshot.Timestamp.Format("2006-01-02 15:04:05"))
-		fmt.Printf("快照包含 %d 个指标\n", len(snapshot.Metrics))
 
-		// 显示一些关键指标
-		for name, data := range snapshot.Metrics {
-			if contains(name, []string{"latency", "throughput", "memory"}) {
-				fmt.Printf("  %s: %v\n", name, data)
-				break
-			}
-		}
-	}
-}
 
 // truncateString 截断字符串
 func truncateString(s string, maxLen int) string {

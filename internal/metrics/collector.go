@@ -1,149 +1,74 @@
 package metrics
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"sort"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/expfmt"
 )
 
 // StandardMetricCollector 标准指标收集器实现
 type StandardMetricCollector struct {
-	registry *MetricRegistry
+	registry *prometheus.Registry
+	metrics  map[string]*PrometheusMetric
 	mu       sync.RWMutex
-	// 性能优化：使用缓存减少锁竞争
-	cache   map[string]*StandardMetric
-	cacheMu sync.RWMutex
 }
 
 // NewStandardMetricCollector 创建标准指标收集器
 func NewStandardMetricCollector() *StandardMetricCollector {
 	return &StandardMetricCollector{
-		registry: NewMetricRegistry(),
-		cache:    make(map[string]*StandardMetric),
+		registry: prometheus.NewRegistry(),
+		metrics:  make(map[string]*PrometheusMetric),
 	}
 }
 
 // RecordCounter 记录计数器指标
 func (c *StandardMetricCollector) RecordCounter(name string, value float64, labels map[string]string) {
-	metricName := c.buildMetricName(name, labels)
-
-	// 首先尝试从缓存中获取
-	c.cacheMu.RLock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.RUnlock()
-		cached.AddValue(value)
-		return
-	}
-	c.cacheMu.RUnlock()
-
-	// 缓存中不存在，需要创建新的指标
+	metricKey := c.buildMetricKey(name, labels)
+	
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// 双重检查，防止并发创建
-	c.cacheMu.Lock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.Unlock()
-		cached.AddValue(value)
-		return
+	metric, exists := c.metrics[metricKey]
+	if !exists {
+		metric = NewPrometheusMetric(name, Counter, labels, c.registry)
+		c.metrics[metricKey] = metric
 	}
-
-	metric := NewStandardMetric(metricName, Counter, value, labels)
-	c.registry.Register(metric)
-	c.cache[metricName] = metric
-	c.cacheMu.Unlock()
+	c.mu.Unlock()
+	
+	metric.AddValue(value)
 }
 
 // RecordGauge 记录仪表盘指标
 func (c *StandardMetricCollector) RecordGauge(name string, value float64, labels map[string]string) {
-	metricName := c.buildMetricName(name, labels)
-
-	// 首先尝试从缓存中获取
-	c.cacheMu.RLock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.RUnlock()
-		cached.SetValue(value)
-		return
-	}
-	c.cacheMu.RUnlock()
-
-	// 缓存中不存在，需要创建新的指标
+	metricKey := c.buildMetricKey(name, labels)
+	
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// 双重检查，防止并发创建
-	c.cacheMu.Lock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.Unlock()
-		cached.SetValue(value)
-		return
+	metric, exists := c.metrics[metricKey]
+	if !exists {
+		metric = NewPrometheusMetric(name, Gauge, labels, c.registry)
+		c.metrics[metricKey] = metric
 	}
-
-	metric := NewStandardMetric(metricName, Gauge, value, labels)
-	c.registry.Register(metric)
-	c.cache[metricName] = metric
-	c.cacheMu.Unlock()
+	c.mu.Unlock()
+	
+	metric.SetValue(value)
 }
 
 // RecordHistogram 记录直方图指标
 func (c *StandardMetricCollector) RecordHistogram(name string, value float64, labels map[string]string) {
-	metricName := c.buildMetricName(name, labels)
-
-	// 简化的直方图实现，使用预定义的桶
-	buckets := []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
-
-	// 使用单一锁保护整个操作
+	metricKey := c.buildMetricKey(name, labels)
+	
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// 检查缓存中是否存在
-	if cached, exists := c.cache[metricName]; exists {
-		// 对于直方图，我们需要更新现有数据
-		if existingData, ok := cached.GetValue().(*HistogramData); ok {
-			// 创建新的数据副本以避免并发修改
-			newData := &HistogramData{
-				Buckets: make([]HistogramBucket, len(existingData.Buckets)),
-				Count:   existingData.Count + 1,
-				Sum:     existingData.Sum + value,
-			}
-			// 复制并更新桶数据
-			for i, bucket := range existingData.Buckets {
-				newData.Buckets[i] = HistogramBucket{
-					UpperBound: bucket.UpperBound,
-					Count:      bucket.Count,
-				}
-				if value <= bucket.UpperBound {
-					newData.Buckets[i].Count++
-				}
-			}
-			cached.SetValue(newData)
-		}
-		return
+	metric, exists := c.metrics[metricKey]
+	if !exists {
+		metric = NewPrometheusMetric(name, Histogram, labels, c.registry)
+		c.metrics[metricKey] = metric
 	}
-
-	// 创建新的直方图数据
-	histogramData := &HistogramData{
-		Buckets: make([]HistogramBucket, len(buckets)),
-		Count:   1,
-		Sum:     value,
-	}
-
-	for i, bound := range buckets {
-		histogramData.Buckets[i] = HistogramBucket{
-			UpperBound: bound,
-			Count:      0,
-		}
-		if value <= bound {
-			histogramData.Buckets[i].Count = 1
-		}
-	}
-
-	metric := NewStandardMetric(metricName, Histogram, histogramData, labels)
-	c.registry.Register(metric)
-	c.cache[metricName] = metric
+	c.mu.Unlock()
+	
+	metric.ObserveValue(value)
 }
 
 // RecordLatency 记录延迟指标
@@ -152,13 +77,9 @@ func (c *StandardMetricCollector) RecordLatency(operation string, duration time.
 		labels = make(map[string]string)
 	}
 	labels["operation"] = operation
-
-	// 记录为直方图（毫秒）
-	latencyMs := float64(duration.Nanoseconds()) / 1e6
-	c.RecordHistogram("latency_ms", latencyMs, labels)
-
-	// 同时记录为仪表盘
-	c.RecordGauge("current_latency_ms", latencyMs, labels)
+	
+	latencySeconds := duration.Seconds()
+	c.RecordHistogram("latency_seconds", latencySeconds, labels)
 }
 
 // RecordThroughput 记录吞吐量指标
@@ -167,12 +88,8 @@ func (c *StandardMetricCollector) RecordThroughput(operation string, count int64
 		labels = make(map[string]string)
 	}
 	labels["operation"] = operation
-
-	// 记录为计数器
+	
 	c.RecordCounter("throughput_total", float64(count), labels)
-
-	// 记录当前速率
-	c.RecordGauge("current_throughput_rate", float64(count), labels)
 }
 
 // RecordError 记录错误指标
@@ -182,187 +99,180 @@ func (c *StandardMetricCollector) RecordError(operation string, errorType string
 	}
 	labels["operation"] = operation
 	labels["error_type"] = errorType
-
-	// 记录错误计数
+	
 	c.RecordCounter("errors_total", 1, labels)
+}
+
+// RecordMemoryUsage 记录内存使用情况
+func (c *StandardMetricCollector) RecordMemoryUsage(component string, bytes int64) {
+	labels := map[string]string{
+		"component": component,
+	}
+	
+	c.RecordGauge("memory_usage_bytes", float64(bytes), labels)
+}
+
+// RecordQueueDepth 记录队列深度
+func (c *StandardMetricCollector) RecordQueueDepth(queueName string, depth int64) {
+	labels := map[string]string{
+		"queue": queueName,
+	}
+	
+	c.RecordGauge("queue_depth", float64(depth), labels)
+}
+
+// RecordConnectionCount 记录连接数
+func (c *StandardMetricCollector) RecordConnectionCount(service string, count int64) {
+	labels := map[string]string{
+		"service": service,
+	}
+	
+	c.RecordGauge("connection_count", float64(count), labels)
 }
 
 // GetMetrics 获取所有指标
 func (c *StandardMetricCollector) GetMetrics() []Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.registry.GetAll()
+	
+	result := make([]Metric, 0, len(c.metrics))
+	for _, metric := range c.metrics {
+		result = append(result, metric)
+	}
+	return result
 }
 
 // GetMetric 获取指定指标
 func (c *StandardMetricCollector) GetMetric(name string) Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.registry.Get(name)
+	
+	for _, metric := range c.metrics {
+		if metric.GetName() == name {
+			return metric
+		}
+	}
+	return nil
 }
 
 // Reset 重置指标
 func (c *StandardMetricCollector) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.cacheMu.Lock()
-	defer c.cacheMu.Unlock()
-	c.registry.Clear()
-	c.cache = make(map[string]*StandardMetric)
+	
+	// 创建新的注册表和指标映射
+	c.registry = prometheus.NewRegistry()
+	c.metrics = make(map[string]*PrometheusMetric)
 }
 
 // Export 导出指标
 func (c *StandardMetricCollector) Export(format string) ([]byte, error) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	switch strings.ToLower(format) {
-	case "json":
-		return c.exportJSON()
+	switch format {
 	case "prometheus":
 		return c.exportPrometheus()
+	case "json":
+		return c.exportJSON()
 	default:
-		return nil, fmt.Errorf("unsupported export format: %s", format)
+		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 }
 
-// exportJSON 导出为JSON格式
+// GetRegistry 获取Prometheus注册表
+func (c *StandardMetricCollector) GetRegistry() *prometheus.Registry {
+	return c.registry
+}
+
+// exportPrometheus 导出Prometheus格式
+func (c *StandardMetricCollector) exportPrometheus() ([]byte, error) {
+	metricFamilies, err := c.registry.Gather()
+	if err != nil {
+		return nil, fmt.Errorf("failed to gather metrics: %w", err)
+	}
+	
+	var buf bytes.Buffer
+	for _, mf := range metricFamilies {
+		if _, err := expfmt.MetricFamilyToText(&buf, mf); err != nil {
+			return nil, fmt.Errorf("failed to write metric family: %w", err)
+		}
+	}
+	
+	return buf.Bytes(), nil
+}
+
+// exportJSON 导出JSON格式
 func (c *StandardMetricCollector) exportJSON() ([]byte, error) {
-	metrics := c.registry.GetAll()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
 	snapshot := MetricSnapshot{
 		Timestamp: time.Now(),
 		Metrics:   make(map[string]interface{}),
 	}
-
-	for _, metric := range metrics {
-		snapshot.Metrics[metric.GetName()] = map[string]interface{}{
-			"type":      metric.GetType(),
-			"value":     metric.GetValue(),
+	
+	for key, metric := range c.metrics {
+		snapshot.Metrics[key] = map[string]interface{}{
+			"name":      metric.GetName(),
+			"type":      string(metric.GetType()),
 			"labels":    metric.GetLabels(),
 			"timestamp": metric.GetTimestamp(),
 		}
 	}
-
-	return json.MarshalIndent(snapshot, "", "  ")
+	
+	return json.Marshal(snapshot)
 }
 
-// exportPrometheus 导出为Prometheus格式
-func (c *StandardMetricCollector) exportPrometheus() ([]byte, error) {
-	metrics := c.registry.GetAll()
-	var lines []string
-
-	for _, metric := range metrics {
-		name := metric.GetName()
-		value := metric.GetValue()
-		labels := metric.GetLabels()
-
-		// 构建标签字符串
-		labelStr := c.buildPrometheusLabels(labels)
-
-		switch metric.GetType() {
-		case Counter:
-			lines = append(lines, fmt.Sprintf("# TYPE %s counter", name))
-			lines = append(lines, fmt.Sprintf("%s%s %v", name, labelStr, value))
-		case Gauge:
-			lines = append(lines, fmt.Sprintf("# TYPE %s gauge", name))
-			lines = append(lines, fmt.Sprintf("%s%s %v", name, labelStr, value))
-		case Histogram:
-			lines = append(lines, fmt.Sprintf("# TYPE %s histogram", name))
-			if histData, ok := value.(*HistogramData); ok {
-				for _, bucket := range histData.Buckets {
-					bucketLabels := c.buildPrometheusLabels(mergeMaps(labels, map[string]string{"le": fmt.Sprintf("%g", bucket.UpperBound)}))
-					lines = append(lines, fmt.Sprintf("%s_bucket%s %d", name, bucketLabels, bucket.Count))
-				}
-				lines = append(lines, fmt.Sprintf("%s_count%s %d", name, labelStr, histData.Count))
-				lines = append(lines, fmt.Sprintf("%s_sum%s %g", name, labelStr, histData.Sum))
+// buildMetricKey 构建指标键
+func (c *StandardMetricCollector) buildMetricKey(name string, labels map[string]string) string {
+	key := name
+	if len(labels) > 0 {
+		key += "{"
+		first := true
+		for k, v := range labels {
+			if !first {
+				key += ","
 			}
+			key += fmt.Sprintf("%s=%s", k, v)
+			first = false
 		}
+		key += "}"
 	}
-
-	return []byte(strings.Join(lines, "\n")), nil
+	return key
 }
 
-// buildMetricName 构建指标名称
-func (c *StandardMetricCollector) buildMetricName(name string, labels map[string]string) string {
-	if len(labels) == 0 {
-		return name
-	}
-
-	// 为了简化，这里直接使用原名称
-	// 在实际实现中，可能需要更复杂的命名策略
-	return name
+// GetMetricCount 获取指标数量
+func (c *StandardMetricCollector) GetMetricCount() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return len(c.metrics)
 }
 
-// buildPrometheusLabels 构建Prometheus标签字符串
-func (c *StandardMetricCollector) buildPrometheusLabels(labels map[string]string) string {
-	if len(labels) == 0 {
-		return ""
+// GetMetricNames 获取所有指标名称
+func (c *StandardMetricCollector) GetMetricNames() []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	names := make(map[string]bool)
+	for _, metric := range c.metrics {
+		names[metric.GetName()] = true
 	}
-
-	var pairs []string
-	for key, value := range labels {
-		pairs = append(pairs, fmt.Sprintf(`%s="%s"`, key, value))
-	}
-
-	sort.Strings(pairs)
-	return "{" + strings.Join(pairs, ",") + "}"
-}
-
-// mergeMaps 合并两个map
-func mergeMaps(map1, map2 map[string]string) map[string]string {
-	result := make(map[string]string)
-	for k, v := range map1 {
-		result[k] = v
-	}
-	for k, v := range map2 {
-		result[k] = v
+	
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
 	}
 	return result
 }
 
-// GetSnapshot 获取指标快照
-func (c *StandardMetricCollector) GetSnapshot() MetricSnapshot {
+// GetMetricsByType 根据类型获取指标
+func (c *StandardMetricCollector) GetMetricsByType(metricType MetricType) []Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-
-	metrics := c.registry.GetAll()
-	snapshot := MetricSnapshot{
-		Timestamp: time.Now(),
-		Metrics:   make(map[string]interface{}),
-	}
-
-	for _, metric := range metrics {
-		snapshot.Metrics[metric.GetName()] = map[string]interface{}{
-			"type":      metric.GetType(),
-			"value":     metric.GetValue(),
-			"labels":    metric.GetLabels(),
-			"timestamp": metric.GetTimestamp(),
+	
+	var result []Metric
+	for _, metric := range c.metrics {
+		if metric.GetType() == metricType {
+			result = append(result, metric)
 		}
 	}
-
-	return snapshot
-}
-
-// RecordProcessingTime 记录处理时间
-func (c *StandardMetricCollector) RecordProcessingTime(component string, duration time.Duration) {
-	labels := map[string]string{"component": component}
-	c.RecordLatency("processing_time", duration, labels)
-}
-
-// RecordMemoryUsage 记录内存使用情况
-func (c *StandardMetricCollector) RecordMemoryUsage(component string, bytes int64) {
-	labels := map[string]string{"component": component}
-	c.RecordGauge("memory_usage_bytes", float64(bytes), labels)
-}
-
-// RecordQueueDepth 记录队列深度
-func (c *StandardMetricCollector) RecordQueueDepth(queueName string, depth int64) {
-	labels := map[string]string{"queue": queueName}
-	c.RecordGauge("queue_depth", float64(depth), labels)
-}
-
-// RecordConnectionCount 记录连接数
-func (c *StandardMetricCollector) RecordConnectionCount(service string, count int64) {
-	labels := map[string]string{"service": service}
-	c.RecordGauge("connection_count", float64(count), labels)
+	return result
 }

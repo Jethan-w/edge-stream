@@ -3,20 +3,18 @@ package metrics
 import (
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // MetricType 指标类型
 type MetricType string
 
 const (
-	// Counter 计数器类型
-	Counter MetricType = "counter"
-	// Gauge 仪表盘类型
-	Gauge MetricType = "gauge"
-	// Histogram 直方图类型
+	Counter   MetricType = "counter"
+	Gauge     MetricType = "gauge"
 	Histogram MetricType = "histogram"
-	// Summary 摘要类型
-	Summary MetricType = "summary"
+	Summary   MetricType = "summary"
 )
 
 // Metric 指标接口
@@ -28,13 +26,16 @@ type Metric interface {
 	GetType() MetricType
 
 	// GetValue 获取指标值
-	GetValue() interface{}
+	GetValue() float64
 
 	// GetLabels 获取标签
 	GetLabels() map[string]string
 
 	// GetTimestamp 获取时间戳
 	GetTimestamp() time.Time
+
+	// GetPrometheusMetric 获取Prometheus指标
+	GetPrometheusMetric() prometheus.Collector
 }
 
 // MetricCollector 指标收集器接口
@@ -77,6 +78,9 @@ type MetricCollector interface {
 
 	// Export 导出指标
 	Export(format string) ([]byte, error)
+
+	// GetRegistry 获取Prometheus注册表
+	GetRegistry() *prometheus.Registry
 }
 
 // MetricSnapshot 指标快照
@@ -85,54 +89,213 @@ type MetricSnapshot struct {
 	Metrics   map[string]interface{} `json:"metrics"`
 }
 
-// StandardMetric 标准指标实现
-type StandardMetric struct {
+// PrometheusMetric Prometheus指标包装器
+type PrometheusMetric struct {
 	name       string
 	metricType MetricType
-	value      interface{}
 	labels     map[string]string
 	timestamp  time.Time
 	mu         sync.RWMutex
+
+	// Prometheus指标
+	counter   prometheus.Counter
+	counterVec prometheus.CounterVec
+	gauge     prometheus.Gauge
+	gaugeVec  prometheus.GaugeVec
+	histogram prometheus.Histogram
+	histogramVec prometheus.HistogramVec
+	summary   prometheus.Summary
+	summaryVec prometheus.SummaryVec
 }
 
-// NewStandardMetric 创建标准指标
-func NewStandardMetric(name string, metricType MetricType, value interface{}, labels map[string]string) *StandardMetric {
+// NewPrometheusMetric 创建Prometheus指标
+func NewPrometheusMetric(name string, metricType MetricType, labels map[string]string, registry *prometheus.Registry) *PrometheusMetric {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
 
-	return &StandardMetric{
+	metric := &PrometheusMetric{
 		name:       name,
 		metricType: metricType,
-		value:      value,
 		labels:     labels,
 		timestamp:  time.Now(),
 	}
+
+	// 根据类型创建相应的Prometheus指标
+	switch metricType {
+	case Counter:
+		if len(labels) > 0 {
+			labelNames := make([]string, 0, len(labels))
+			for k := range labels {
+				labelNames = append(labelNames, k)
+			}
+			metric.counterVec = *prometheus.NewCounterVec(
+				prometheus.CounterOpts{
+					Name: name,
+					Help: "Counter metric for " + name,
+				},
+				labelNames,
+			)
+			if err := registry.Register(&metric.counterVec); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingVec, ok := are.ExistingCollector.(*prometheus.CounterVec); ok {
+						metric.counterVec = *existingVec
+					}
+				}
+			}
+		} else {
+			metric.counter = prometheus.NewCounter(
+				prometheus.CounterOpts{
+					Name: name,
+					Help: "Counter metric for " + name,
+				},
+			)
+			if err := registry.Register(metric.counter); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingCounter, ok := are.ExistingCollector.(prometheus.Counter); ok {
+						metric.counter = existingCounter
+					}
+				}
+			}
+		}
+	case Gauge:
+		if len(labels) > 0 {
+			labelNames := make([]string, 0, len(labels))
+			for k := range labels {
+				labelNames = append(labelNames, k)
+			}
+			metric.gaugeVec = *prometheus.NewGaugeVec(
+				prometheus.GaugeOpts{
+					Name: name,
+					Help: "Gauge metric for " + name,
+				},
+				labelNames,
+			)
+			if err := registry.Register(&metric.gaugeVec); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingVec, ok := are.ExistingCollector.(*prometheus.GaugeVec); ok {
+						metric.gaugeVec = *existingVec
+					}
+				}
+			}
+		} else {
+			metric.gauge = prometheus.NewGauge(
+				prometheus.GaugeOpts{
+					Name: name,
+					Help: "Gauge metric for " + name,
+				},
+			)
+			if err := registry.Register(metric.gauge); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingGauge, ok := are.ExistingCollector.(prometheus.Gauge); ok {
+						metric.gauge = existingGauge
+					}
+				}
+			}
+		}
+	case Histogram:
+		if len(labels) > 0 {
+			labelNames := make([]string, 0, len(labels))
+			for k := range labels {
+				labelNames = append(labelNames, k)
+			}
+			metric.histogramVec = *prometheus.NewHistogramVec(
+				prometheus.HistogramOpts{
+					Name:    name,
+					Help:    "Histogram metric for " + name,
+					Buckets: prometheus.DefBuckets,
+				},
+				labelNames,
+			)
+			if err := registry.Register(&metric.histogramVec); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingVec, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok {
+						metric.histogramVec = *existingVec
+					}
+				}
+			}
+		} else {
+			metric.histogram = prometheus.NewHistogram(
+				prometheus.HistogramOpts{
+					Name:    name,
+					Help:    "Histogram metric for " + name,
+					Buckets: prometheus.DefBuckets,
+				},
+			)
+			if err := registry.Register(metric.histogram); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingHistogram, ok := are.ExistingCollector.(prometheus.Histogram); ok {
+						metric.histogram = existingHistogram
+					}
+				}
+			}
+		}
+	case Summary:
+		if len(labels) > 0 {
+			labelNames := make([]string, 0, len(labels))
+			for k := range labels {
+				labelNames = append(labelNames, k)
+			}
+			metric.summaryVec = *prometheus.NewSummaryVec(
+				prometheus.SummaryOpts{
+					Name: name,
+					Help: "Summary metric for " + name,
+				},
+				labelNames,
+			)
+			if err := registry.Register(&metric.summaryVec); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingVec, ok := are.ExistingCollector.(*prometheus.SummaryVec); ok {
+						metric.summaryVec = *existingVec
+					}
+				}
+			}
+		} else {
+			metric.summary = prometheus.NewSummary(
+				prometheus.SummaryOpts{
+					Name: name,
+					Help: "Summary metric for " + name,
+				},
+			)
+			if err := registry.Register(metric.summary); err != nil {
+				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+					if existingSummary, ok := are.ExistingCollector.(prometheus.Summary); ok {
+						metric.summary = existingSummary
+					}
+				}
+			}
+		}
+	}
+
+	return metric
 }
 
 // GetName 获取指标名称
-func (m *StandardMetric) GetName() string {
+func (m *PrometheusMetric) GetName() string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.name
 }
 
 // GetType 获取指标类型
-func (m *StandardMetric) GetType() MetricType {
+func (m *PrometheusMetric) GetType() MetricType {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.metricType
 }
 
 // GetValue 获取指标值
-func (m *StandardMetric) GetValue() interface{} {
+func (m *PrometheusMetric) GetValue() float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	return m.value
+	
+	// 对于Prometheus指标，我们返回0作为占位符
+	// 实际值需要通过Prometheus的Gather方法获取
+	return 0.0
 }
 
 // GetLabels 获取标签
-func (m *StandardMetric) GetLabels() map[string]string {
+func (m *PrometheusMetric) GetLabels() map[string]string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -144,114 +307,119 @@ func (m *StandardMetric) GetLabels() map[string]string {
 }
 
 // GetTimestamp 获取时间戳
-func (m *StandardMetric) GetTimestamp() time.Time {
+func (m *PrometheusMetric) GetTimestamp() time.Time {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.timestamp
 }
 
-// SetValue 设置指标值
-func (m *StandardMetric) SetValue(value interface{}) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.value = value
-	m.timestamp = time.Now()
-}
-
-// AddValue 增加指标值（仅适用于数值类型）
-func (m *StandardMetric) AddValue(delta float64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	switch v := m.value.(type) {
-	case float64:
-		m.value = v + delta
-	case int64:
-		m.value = v + int64(delta)
-	case int:
-		m.value = v + int(delta)
+// GetPrometheusMetric 获取Prometheus指标
+func (m *PrometheusMetric) GetPrometheusMetric() prometheus.Collector {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	switch m.metricType {
+	case Counter:
+		if m.counter != nil {
+			return m.counter
+		}
+		return m.counterVec
+	case Gauge:
+		if m.gauge != nil {
+			return m.gauge
+		}
+		return m.gaugeVec
+	case Histogram:
+		if m.histogram != nil {
+			return m.histogram
+		}
+		return m.histogramVec
+	case Summary:
+		if m.summary != nil {
+			return m.summary
+		}
+		return m.summaryVec
 	default:
-		m.value = delta
+		return nil
 	}
+}
 
+// SetValue 设置指标值
+func (m *PrometheusMetric) SetValue(value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.timestamp = time.Now()
-}
 
-// HistogramData 直方图数据
-type HistogramData struct {
-	Buckets []HistogramBucket `json:"buckets"`
-	Count   int64             `json:"count"`
-	Sum     float64           `json:"sum"`
-}
-
-// HistogramBucket 直方图桶
-type HistogramBucket struct {
-	UpperBound float64 `json:"upper_bound"`
-	Count      int64   `json:"count"`
-}
-
-// SummaryData 摘要数据
-type SummaryData struct {
-	Quantiles []SummaryQuantile `json:"quantiles"`
-	Count     int64             `json:"count"`
-	Sum       float64           `json:"sum"`
-}
-
-// SummaryQuantile 摘要分位数
-type SummaryQuantile struct {
-	Quantile float64 `json:"quantile"`
-	Value    float64 `json:"value"`
-}
-
-// MetricRegistry 指标注册表
-type MetricRegistry struct {
-	metrics map[string]Metric
-	mu      sync.RWMutex
-}
-
-// NewMetricRegistry 创建指标注册表
-func NewMetricRegistry() *MetricRegistry {
-	return &MetricRegistry{
-		metrics: make(map[string]Metric),
+	switch m.metricType {
+	case Gauge:
+		if m.gauge != nil {
+			m.gauge.Set(value)
+		} else {
+			labelValues := make([]string, 0, len(m.labels))
+			for _, v := range m.labels {
+				labelValues = append(labelValues, v)
+			}
+			m.gaugeVec.WithLabelValues(labelValues...).Set(value)
+		}
 	}
 }
 
-// Register 注册指标
-func (r *MetricRegistry) Register(metric Metric) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.metrics[metric.GetName()] = metric
-}
+// AddValue 增加指标值
+func (m *PrometheusMetric) AddValue(delta float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.timestamp = time.Now()
 
-// Unregister 注销指标
-func (r *MetricRegistry) Unregister(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.metrics, name)
-}
-
-// Get 获取指标
-func (r *MetricRegistry) Get(name string) Metric {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.metrics[name]
-}
-
-// GetAll 获取所有指标
-func (r *MetricRegistry) GetAll() []Metric {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	result := make([]Metric, 0, len(r.metrics))
-	for _, metric := range r.metrics {
-		result = append(result, metric)
+	switch m.metricType {
+	case Counter:
+		if m.counter != nil {
+			m.counter.Add(delta)
+		} else {
+			labelValues := make([]string, 0, len(m.labels))
+			for _, v := range m.labels {
+				labelValues = append(labelValues, v)
+			}
+			m.counterVec.WithLabelValues(labelValues...).Add(delta)
+		}
+	case Gauge:
+		if m.gauge != nil {
+			m.gauge.Add(delta)
+		} else {
+			labelValues := make([]string, 0, len(m.labels))
+			for _, v := range m.labels {
+				labelValues = append(labelValues, v)
+			}
+			m.gaugeVec.WithLabelValues(labelValues...).Add(delta)
+		}
 	}
-	return result
 }
 
-// Clear 清空所有指标
-func (r *MetricRegistry) Clear() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.metrics = make(map[string]Metric)
+// ObserveValue 观察值（用于直方图和摘要）
+func (m *PrometheusMetric) ObserveValue(value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.timestamp = time.Now()
+
+	switch m.metricType {
+	case Histogram:
+		if m.histogram != nil {
+			m.histogram.Observe(value)
+		} else {
+			labelValues := make([]string, 0, len(m.labels))
+			for _, v := range m.labels {
+				labelValues = append(labelValues, v)
+			}
+			m.histogramVec.WithLabelValues(labelValues...).Observe(value)
+		}
+	case Summary:
+		if m.summary != nil {
+			m.summary.Observe(value)
+		} else {
+			labelValues := make([]string, 0, len(m.labels))
+			for _, v := range m.labels {
+				labelValues = append(labelValues, v)
+			}
+			m.summaryVec.WithLabelValues(labelValues...).Observe(value)
+		}
+	}
 }
