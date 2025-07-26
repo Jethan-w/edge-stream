@@ -120,7 +120,7 @@ func TestConfigManagerConcurrency(t *testing.T) {
 
 func BenchmarkConfigManager(b *testing.B) {
 	cm := NewStandardConfigManager("")
-	cm.Set("benchmark.test", "value")
+	_ = cm.Set("benchmark.test", "value")
 
 	b.Run("Set", func(b *testing.B) {
 		b.ResetTimer()
