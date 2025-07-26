@@ -37,7 +37,7 @@ func main() {
 	absDataFile := createStreamSampleData()
 
 	// 创建和配置拓扑
-	topology := createTopology(engine, absDataFile)
+	createTopology(engine, absDataFile)
 
 	// 显示拓扑信息
 	displayTopologyInfo(engine)
@@ -86,7 +86,7 @@ func createStreamSampleData() string {
 }
 
 // createTopology 创建和配置拓扑
-func createTopology(engine *stream.StandardStreamEngine, absDataFile string) *stream.Topology {
+func createTopology(engine *stream.StandardStreamEngine, absDataFile string) {
 	// 创建流拓扑
 	topology, err := engine.CreateTopology("demo-topology", "演示拓扑", "展示流处理引擎功能的示例拓扑")
 	if err != nil {
@@ -100,7 +100,7 @@ func createTopology(engine *stream.StandardStreamEngine, absDataFile string) *st
 	// 连接处理器
 	connectProcessors(engine)
 
-	return topology
+
 }
 
 // createProcessors 创建所有处理器
@@ -206,7 +206,7 @@ func displayTopologyInfo(engine *stream.StandardStreamEngine) {
 func startStreamProcessing(engine *stream.StandardStreamEngine) context.Context {
 	// 启动事件监听
 	fmt.Println("\n=== 启动事件监听 ===")
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, _ := context.WithCancel(context.Background())
 
 	go func() {
 		eventChan := engine.GetEventChannel()
