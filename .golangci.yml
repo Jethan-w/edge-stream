@@ -21,6 +21,7 @@ linters-settings:
           - $all
           - $gostd
           - github.com/crazy/edge-stream/internal/flowfile
+          - github.com/crazy/edge-stream/internal/constants
           - gopkg.in/yaml.v3
         deny:
           - pkg: "github.com/sirupsen/logrus"
