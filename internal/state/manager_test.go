@@ -130,9 +130,15 @@ func TestMemoryStateManager(t *testing.T) {
 	t.Run("ClearAll", func(t *testing.T) {
 		state, _ := sm.CreateState("test_state3", StateTypeMemory)
 		// 添加一些状态
-		state.Set("key1", "value1")
-		state.Set("key2", "value2")
-		state.Set("key3", "value3")
+		if err := state.Set("key1", "value1"); err != nil {
+			t.Errorf("Failed to set key1: %v", err)
+		}
+		if err := state.Set("key2", "value2"); err != nil {
+			t.Errorf("Failed to set key2: %v", err)
+		}
+		if err := state.Set("key3", "value3"); err != nil {
+			t.Errorf("Failed to set key3: %v", err)
+		}
 
 		// 清空所有状态
 		err := state.Clear()
@@ -165,7 +171,9 @@ func TestStateManagerConcurrency(t *testing.T) {
 					key := fmt.Sprintf("key_%d_%d", id, j)
 					value := fmt.Sprintf("value_%d_%d", id, j)
 					state, _ := sm.CreateState(fmt.Sprintf("state_%d_%d", id, j), StateTypeMemory)
-					state.Set(key, value)
+					if err := state.Set(key, value); err != nil {
+						t.Errorf("Failed to set key %s: %v", key, err)
+					}
 				}
 			}(i)
 		}
@@ -195,7 +203,9 @@ func TestStateManagerConcurrency(t *testing.T) {
 		for i := 0; i < 100; i++ {
 			key := fmt.Sprintf("delete_key_%d", i)
 			state, _ := sm.CreateState(fmt.Sprintf("delete_state_%d", i), StateTypeMemory)
-			state.Set(key, "value")
+			if err := state.Set(key, "value"); err != nil {
+				t.Errorf("Failed to set key %s: %v", key, err)
+			}
 			states[i] = state
 		}
 
@@ -321,7 +331,9 @@ func BenchmarkStateManager(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			key := fmt.Sprintf("bench_key_%d", i)
-			state.Set(key, "benchmark_value")
+			if err := state.Set(key, "benchmark_value"); err != nil {
+				b.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 	})
 
@@ -329,7 +341,9 @@ func BenchmarkStateManager(b *testing.B) {
 		// 预先设置一些状态
 		for i := 0; i < 1000; i++ {
 			key := fmt.Sprintf("get_bench_key_%d", i)
-			state.Set(key, "value")
+			if err := state.Set(key, "value"); err != nil {
+				b.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		b.ResetTimer()
@@ -343,7 +357,9 @@ func BenchmarkStateManager(b *testing.B) {
 		// 预先设置一些状态
 		for i := 0; i < 1000; i++ {
 			key := fmt.Sprintf("has_bench_key_%d", i)
-			state.Set(key, "value")
+			if err := state.Set(key, "value"); err != nil {
+				b.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		b.ResetTimer()
@@ -362,7 +378,9 @@ func TestStateManagerPerformanceStandards(t *testing.T) {
 	// 测试单次操作性能
 	t.Run("SingleOperationPerformance", func(t *testing.T) {
 		start := time.Now()
-		state.Set("perf_test", "value")
+		if err := state.Set("perf_test", "value"); err != nil {
+			t.Errorf("Failed to set key: %v", err)
+		}
 		duration := time.Since(start)
 
 		// 单次操作应该在100μs内完成
@@ -387,7 +405,9 @@ func TestStateManagerPerformanceStandards(t *testing.T) {
 
 		for i := 0; i < numOps; i++ {
 			key := fmt.Sprintf("batch_key_%d", i)
-			state.Set(key, "value")
+			if err := state.Set(key, "value"); err != nil {
+				t.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		duration := time.Since(start)
@@ -406,7 +426,9 @@ func TestStateManagerPerformanceStandards(t *testing.T) {
 		for i := 0; i < numStates; i++ {
 			key := fmt.Sprintf("memory_test_%d", i)
 			value := fmt.Sprintf("value_%d", i)
-			state.Set(key, value)
+			if err := state.Set(key, value); err != nil {
+				t.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		// 验证所有状态都能正确访问

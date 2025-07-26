@@ -204,16 +204,32 @@ func (m *StandardConfigManager) GetInt(key string) int {
 		case int32:
 			return int(v)
 		case int64:
+			// 检查int64到int的安全转换
+			if v > 2147483647 || v < -2147483648 {
+				return 0 // 溢出时返回0
+			}
 			return int(v)
 		case uint:
+			// 检查uint到int的安全转换
+			if v > 2147483647 {
+				return 0 // 溢出时返回0
+			}
 			return int(v)
 		case uint8:
 			return int(v)
 		case uint16:
 			return int(v)
 		case uint32:
+			// 检查uint32到int的安全转换
+			if v > 2147483647 {
+				return 0 // 溢出时返回0
+			}
 			return int(v)
 		case uint64:
+			// 检查uint64到int的安全转换
+			if v > 2147483647 {
+				return 0 // 溢出时返回0
+			}
 			return int(v)
 		case float32:
 			return int(v)

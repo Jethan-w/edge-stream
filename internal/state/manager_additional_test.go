@@ -24,7 +24,10 @@ import (
 // TestStateManagerEdgeCases 测试边界条件
 func TestStateManagerEdgeCases(t *testing.T) {
 	sm := NewStandardStateManager(nil)
-	state, _ := sm.CreateState("test_state", StateTypeMemory)
+	state, err := sm.CreateState("test_state", StateTypeMemory)
+        if err != nil {
+                t.Fatalf("Failed to create state: %v", err)
+        }
 
 	// 测试空键
 	t.Run("EmptyKey", func(t *testing.T) {
@@ -219,8 +222,7 @@ func TestStateManagerAdvancedConcurrency(t *testing.T) {
 				for j := 0; j < numOperations; j++ {
 					key := fmt.Sprintf("concurrent.%d.%d", id, j)
 					value := fmt.Sprintf("value-%d-%d", id, j)
-					err := state.Set(key, value)
-					if err != nil {
+					if err := state.Set(key, value); err != nil {
 						atomic.AddInt64(&errors, 1)
 					}
 				}
@@ -428,7 +430,9 @@ func TestStateManagerPerformanceOptimized(t *testing.T) {
 		for i := 0; i < numKeys; i++ {
 			key := fmt.Sprintf("mem.%d", i)
 			value := fmt.Sprintf("v%d", i)
-			state.Set(key, value)
+			if err := state.Set(key, value); err != nil {
+				t.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		// 验证所有键都存在
@@ -475,7 +479,9 @@ func TestStateManagerErrorRecovery(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			key := fmt.Sprintf("cleanup.%d", i)
 			value := fmt.Sprintf("cleanup-value-%d", i)
-			state.Set(key, value)
+			if err := state.Set(key, value); err != nil {
+				t.Errorf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		// 删除一半数据
