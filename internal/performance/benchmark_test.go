@@ -48,7 +48,7 @@ func BenchmarkConfigManager(b *testing.B) {
 		cm := config.NewStandardConfigManager("")
 		// 预设数据
 		for i := 0; i < BenchmarkDataSetSize; i++ {
-			cm.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
+			_ = cm.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
 		}
 
 		b.ResetTimer()
