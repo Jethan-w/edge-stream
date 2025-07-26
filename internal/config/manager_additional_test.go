@@ -356,7 +356,7 @@ test:
 		if _, err := tempFile.WriteString(configContent); err != nil {
 			t.Fatal(err)
 		}
-		tempFile.Close()
+		_ = tempFile.Close()
 
 		err = cm.LoadConfig(tempFile.Name())
 		if err != nil {
@@ -387,7 +387,7 @@ test:
 		if _, err := tempFile.WriteString(invalidContent); err != nil {
 			t.Fatal(err)
 		}
-		tempFile.Close()
+		_ = tempFile.Close()
 
 		err = cm.LoadConfig(tempFile.Name())
 		if err == nil {
@@ -463,7 +463,7 @@ func TestConfigManagerErrorHandling(t *testing.T) {
 	// 测试类型转换错误
 	t.Run("TypeConversionErrors", func(t *testing.T) {
 		// 设置字符串值
-		cm.Set("string.value", "not-a-number")
+		_ = cm.Set("string.value", "not-a-number")
 
 		// 尝试作为整数获取
 		intValue := cm.GetInt("string.value")
@@ -514,7 +514,7 @@ func TestConfigManagerErrorHandling(t *testing.T) {
 	// 测试带默认值的获取
 	t.Run("GetWithDefaults", func(t *testing.T) {
 		// 测试存在的键（应该返回实际值）
-		cm.Set("existing.key", "actual-value")
+		_ = cm.Set("existing.key", "actual-value")
 		value := cm.GetString("existing.key")
 		if value == "" {
 			value = "default-value"
