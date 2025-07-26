@@ -100,7 +100,6 @@ func createTopology(engine *stream.StandardStreamEngine, absDataFile string) {
 	// 连接处理器
 	connectProcessors(engine)
 
-
 }
 
 // createProcessors 创建所有处理器
