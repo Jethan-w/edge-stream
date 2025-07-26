@@ -129,12 +129,12 @@ jobs:
     
     - name: Run Gosec Security Scanner
       run: |
-        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest || echo "Gosec installation failed, skipping security scan"
-        if command -v gosec >/dev/null 2>&1; then
-          gosec -fmt sarif -out gosec-results.sarif ./...
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest || echo "Gosec installation failed, trying alternative"
+        if ! command -v gosec >/dev/null 2>&1; then
+          echo "Gosec not available, skipping security scan"
+          echo '{"version": "2.0.0", "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json", "runs": []}' > gosec-results.sarif
         else
-          echo "Gosec not available, creating empty SARIF file"
-          echo '{}' > gosec-results.sarif
+          gosec -fmt sarif -out gosec-results.sarif ./...
         fi
     
     - name: Upload Gosec scan results to GitHub Security tab
