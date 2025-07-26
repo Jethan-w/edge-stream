@@ -116,9 +116,9 @@ jobs:
     
     - name: Check cognitive complexity
       run: |
-        gocognit -over 50 .
+        gocognit -over 30 .
         if [ $? -ne 0 ]; then
-          echo "❌ Some functions have high cognitive complexity (>50)"
+          echo "❌ Some functions have high cognitive complexity (>30)"
           exit 1
         fi
         echo "✅ All functions have acceptable cognitive complexity"
