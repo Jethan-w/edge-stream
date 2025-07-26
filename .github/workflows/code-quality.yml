@@ -104,9 +104,9 @@ jobs:
     
     - name: Check cyclomatic complexity
       run: |
-        gocyclo -over 50 .
+        gocyclo -over 25 .
         if [ $? -ne 0 ]; then
-          echo "❌ Some functions have high cyclomatic complexity (>50)"
+          echo "❌ Some functions have high cyclomatic complexity (>25)"
           exit 1
         fi
         echo "✅ All functions have acceptable cyclomatic complexity"

@@ -29,13 +29,44 @@ import (
 func main() {
 	fmt.Println("=== Edge Stream 流处理引擎示例 ===")
 
-	// 创建流处理引擎
-	fmt.Println("正在创建流处理引擎...")
-	engine := stream.NewStandardStreamEngine()
+	// 初始化流处理引擎
+	engine := initializeStreamEngine()
 	defer engine.Close()
-	fmt.Println("流处理引擎创建成功")
 
 	// 创建示例数据文件
+	absDataFile := createStreamSampleData()
+
+	// 创建和配置拓扑
+	topology := createTopology(engine, absDataFile)
+
+	// 显示拓扑信息
+	displayTopologyInfo(engine)
+
+	// 启动流处理
+	ctx := startStreamProcessing(engine)
+
+	// 运行监控和指标显示
+	runStreamMonitoring(ctx, engine)
+
+	// 等待中断信号并停止
+	stopStreamProcessing(ctx, engine)
+
+	// 清理资源
+	cleanupStreamResources(engine)
+
+	fmt.Println("\n=== 流处理引擎示例完成 ===")
+}
+
+// initializeStreamEngine 初始化流处理引擎
+func initializeStreamEngine() *stream.StandardStreamEngine {
+	fmt.Println("正在创建流处理引擎...")
+	engine := stream.NewStandardStreamEngine()
+	fmt.Println("流处理引擎创建成功")
+	return engine
+}
+
+// createStreamSampleData 创建示例数据文件
+func createStreamSampleData() string {
 	fmt.Println("正在创建示例数据文件...")
 	dataDir := "data"
 	dataFile := filepath.Join(dataDir, "stream_data.txt")
@@ -51,7 +82,11 @@ func main() {
 		log.Fatalf("获取绝对路径失败: %v", err)
 	}
 	fmt.Printf("示例数据文件已创建: %s\n", absDataFile)
+	return absDataFile
+}
 
+// createTopology 创建和配置拓扑
+func createTopology(engine *stream.StandardStreamEngine, absDataFile string) *stream.Topology {
 	// 创建流拓扑
 	topology, err := engine.CreateTopology("demo-topology", "演示拓扑", "展示流处理引擎功能的示例拓扑")
 	if err != nil {
@@ -60,23 +95,33 @@ func main() {
 	fmt.Printf("流拓扑已创建: %s\n", topology.Name)
 
 	// 创建处理器
+	createProcessors(engine, absDataFile)
+
+	// 连接处理器
+	connectProcessors(engine)
+
+	return topology
+}
+
+// createProcessors 创建所有处理器
+func createProcessors(engine *stream.StandardStreamEngine, absDataFile string) {
 	fmt.Println("\n=== 创建处理器 ===")
 
-	// 1. 文件源处理器
+	// 文件源处理器
 	fileSource := stream.NewFileSourceProcessor("file-source", "文件数据源", absDataFile)
 	if err := engine.AddProcessor("demo-topology", fileSource); err != nil {
 		log.Fatalf("添加文件源处理器失败: %v", err)
 	}
 	fmt.Println("文件源处理器已添加")
 
-	// 2. JSON转换处理器
+	// JSON转换处理器
 	jsonTransform := stream.NewJSONTransformProcessor("json-transform", "JSON转换器")
 	if err := engine.AddProcessor("demo-topology", jsonTransform); err != nil {
 		log.Fatalf("添加JSON转换处理器失败: %v", err)
 	}
 	fmt.Println("JSON转换处理器已添加")
 
-	// 3. 聚合处理器（计算平均分数）
+	// 聚合处理器（计算平均分数）
 	windowConfig := &stream.WindowConfig{
 		Type:      stream.WindowTypeTumbling,
 		Size:      5 * time.Second,
@@ -89,21 +134,23 @@ func main() {
 	}
 	fmt.Println("聚合处理器已添加")
 
-	// 4. 控制台输出处理器（用于原始数据）
+	// 控制台输出处理器（用于原始数据）
 	consoleSink1 := stream.NewConsoleSinkProcessor("console-sink-1", "控制台输出1")
 	if err := engine.AddProcessor("demo-topology", consoleSink1); err != nil {
 		log.Fatalf("添加控制台输出处理器1失败: %v", err)
 	}
 	fmt.Println("控制台输出处理器1已添加")
 
-	// 5. 控制台输出处理器（用于聚合结果）
+	// 控制台输出处理器（用于聚合结果）
 	consoleSink2 := stream.NewConsoleSinkProcessor("console-sink-2", "控制台输出2")
 	if err := engine.AddProcessor("demo-topology", consoleSink2); err != nil {
 		log.Fatalf("添加控制台输出处理器2失败: %v", err)
 	}
 	fmt.Println("控制台输出处理器2已添加")
+}
 
-	// 连接处理器
+// connectProcessors 连接处理器
+func connectProcessors(engine *stream.StandardStreamEngine) {
 	fmt.Println("\n=== 连接处理器 ===")
 
 	// 文件源 -> JSON转换器
@@ -130,7 +177,10 @@ func main() {
 	}
 	fmt.Println("聚合处理器 -> 控制台输出2 连接已建立")
 
-	// 显示拓扑信息
+}
+
+// displayTopologyInfo 显示拓扑信息
+func displayTopologyInfo(engine *stream.StandardStreamEngine) {
 	fmt.Println("\n=== 拓扑信息 ===")
 	topologies, _ := engine.ListTopologies()
 	for _, topo := range topologies {
@@ -150,11 +200,13 @@ func main() {
 			fmt.Printf("    - %s -> %s (缓冲区大小: %d)\n", conn.From, conn.To, conn.BufferSize)
 		}
 	}
+}
 
+// startStreamProcessing 启动流处理
+func startStreamProcessing(engine *stream.StandardStreamEngine) context.Context {
 	// 启动事件监听
 	fmt.Println("\n=== 启动事件监听 ===")
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		eventChan := engine.GetEventChannel()
@@ -175,6 +227,11 @@ func main() {
 	status, _ := engine.GetTopologyStatus("demo-topology")
 	fmt.Printf("拓扑状态: %s\n", status)
 
+	return ctx
+}
+
+// runStreamMonitoring 运行监控和指标显示
+func runStreamMonitoring(ctx context.Context, engine *stream.StandardStreamEngine) {
 	// 定期显示指标
 	fmt.Println("\n=== 流处理进行中 ===")
 	fmt.Println("正在处理数据流，按 Ctrl+C 停止...")
@@ -226,7 +283,10 @@ func main() {
 			}
 		}
 	}()
+}
 
+// stopStreamProcessing 等待中断信号并停止流处理
+func stopStreamProcessing(ctx context.Context, engine *stream.StandardStreamEngine) {
 	// 等待中断信号
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
@@ -244,6 +304,10 @@ func main() {
 		fmt.Println("流处理拓扑已停止")
 	}
 
+}
+
+// cleanupStreamResources 清理资源
+func cleanupStreamResources(engine *stream.StandardStreamEngine) {
 	// 显示最终指标
 	fmt.Println("\n=== 最终指标 ===")
 	topologyMetrics, err := engine.GetTopologyMetrics("demo-topology")
@@ -274,11 +338,10 @@ func main() {
 	}
 
 	// 清理数据文件
+	dataDir := "data"
 	if err := os.RemoveAll(dataDir); err != nil {
 		log.Printf("清理数据目录失败: %v", err)
 	} else {
 		fmt.Printf("数据目录 %s 已清理\n", dataDir)
 	}
-
-	fmt.Println("\n=== 流处理引擎示例完成 ===")
 }
