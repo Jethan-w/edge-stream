@@ -195,8 +195,8 @@ func TestStateManagerConcurrency(t *testing.T) {
 				for j := 0; j < numOperations; j++ {
 					key := fmt.Sprintf("key_%d_%d", id, j)
 					if state, exists := sm.GetState(fmt.Sprintf("state_%d_%d", id, j)); exists {
-						state.Get(key)
-						state.Exists(key)
+						_, _ = state.Get(key)
+						_ = state.Exists(key)
 					}
 				}
 			}(i)
@@ -358,7 +358,7 @@ func BenchmarkStateManager(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			key := fmt.Sprintf("get_bench_key_%d", i%1000)
-			state.Get(key)
+			_, _ = state.Get(key)
 		}
 	})
 
@@ -398,7 +398,7 @@ func TestStateManagerPerformanceStandards(t *testing.T) {
 		}
 
 		start = time.Now()
-		state.Get("perf_test")
+		_, _ = state.Get("perf_test")
 		duration = time.Since(start)
 
 		// 单次获取应该在50μs内完成

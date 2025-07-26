@@ -193,10 +193,26 @@ func (m *PrometheusMetric) registerMetricSingle(registry *prometheus.Registry, c
 	}
 }
 
-// createCounterMetric 创建Counter指标
-func (m *PrometheusMetric) createCounterMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+// createMetricWithLabels 通用的指标创建方法
+func (m *PrometheusMetric) createMetricWithLabels(
+	name string,
+	labels map[string]string,
+	registry *prometheus.Registry,
+	metricType string,
+	withLabels func([]string),
+	withoutLabels func(),
+) {
 	if len(labels) > 0 {
 		labelNames := m.getLabelNames(labels)
+		withLabels(labelNames)
+	} else {
+		withoutLabels()
+	}
+}
+
+// createCounterMetric 创建Counter指标
+func (m *PrometheusMetric) createCounterMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+	m.createMetricWithLabels(name, labels, registry, "counter", func(labelNames []string) {
 		m.counterVec = *prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: name,
@@ -205,7 +221,7 @@ func (m *PrometheusMetric) createCounterMetric(name string, labels map[string]st
 			labelNames,
 		)
 		m.registerMetricVec(registry, &m.counterVec, "counter")
-	} else {
+	}, func() {
 		m.counter = prometheus.NewCounter(
 			prometheus.CounterOpts{
 				Name: name,
@@ -213,13 +229,12 @@ func (m *PrometheusMetric) createCounterMetric(name string, labels map[string]st
 			},
 		)
 		m.registerMetricSingle(registry, m.counter, "counter")
-	}
+	})
 }
 
 // createGaugeMetric 创建Gauge指标
 func (m *PrometheusMetric) createGaugeMetric(name string, labels map[string]string, registry *prometheus.Registry) {
-	if len(labels) > 0 {
-		labelNames := m.getLabelNames(labels)
+	m.createMetricWithLabels(name, labels, registry, "gauge", func(labelNames []string) {
 		m.gaugeVec = *prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: name,
@@ -228,7 +243,7 @@ func (m *PrometheusMetric) createGaugeMetric(name string, labels map[string]stri
 			labelNames,
 		)
 		m.registerMetricVec(registry, &m.gaugeVec, "gauge")
-	} else {
+	}, func() {
 		m.gauge = prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: name,
@@ -236,7 +251,7 @@ func (m *PrometheusMetric) createGaugeMetric(name string, labels map[string]stri
 			},
 		)
 		m.registerMetricSingle(registry, m.gauge, "gauge")
-	}
+	})
 }
 
 // NewPrometheusMetric 创建Prometheus指标
@@ -269,8 +284,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 
 // createHistogramMetric 创建Histogram指标
 func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]string, registry *prometheus.Registry) {
-	if len(labels) > 0 {
-		labelNames := m.getLabelNames(labels)
+	m.createMetricWithLabels(name, labels, registry, "histogram", func(labelNames []string) {
 		m.histogramVec = *prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    name,
@@ -280,7 +294,7 @@ func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]
 			labelNames,
 		)
 		m.registerMetricVec(registry, &m.histogramVec, "histogram")
-	} else {
+	}, func() {
 		m.histogram = prometheus.NewHistogram(
 			prometheus.HistogramOpts{
 				Name:    name,
@@ -289,13 +303,12 @@ func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]
 			},
 		)
 		m.registerMetricSingle(registry, m.histogram, "histogram")
-	}
+	})
 }
 
 // createSummaryMetric 创建Summary指标
 func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]string, registry *prometheus.Registry) {
-	if len(labels) > 0 {
-		labelNames := m.getLabelNames(labels)
+	m.createMetricWithLabels(name, labels, registry, "summary", func(labelNames []string) {
 		m.summaryVec = *prometheus.NewSummaryVec(
 			prometheus.SummaryOpts{
 				Name: name,
@@ -304,7 +317,7 @@ func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]st
 			labelNames,
 		)
 		m.registerMetricVec(registry, &m.summaryVec, "summary")
-	} else {
+	}, func() {
 		m.summary = prometheus.NewSummary(
 			prometheus.SummaryOpts{
 				Name: name,
@@ -312,7 +325,7 @@ func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]st
 			},
 		)
 		m.registerMetricSingle(registry, m.summary, "summary")
-	}
+	})
 }
 
 // GetName 获取指标名称

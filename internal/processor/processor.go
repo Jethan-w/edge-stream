@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package processor 提供数据处理器的接口和实现。
+// 处理器用于对流经系统的数据进行转换、过滤和处理操作。
 package processor
 
 import (

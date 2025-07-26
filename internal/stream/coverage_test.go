@@ -21,6 +21,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // TestStreamMetrics 测试流指标功能
@@ -66,18 +68,18 @@ func TestFileSourceProcessor(t *testing.T) {
 	testFileSourceStartStop(t, processor)
 }
 
-func setupFileSourceProcessor(t *testing.T) (*FileSourceProcessor, string) {
+func setupFileSourceProcessor(t *testing.T) (processor *FileSourceProcessor, testFile string) {
 	// 创建临时测试文件
 	tempDir := t.TempDir()
-	testFile := filepath.Join(tempDir, "test.txt")
+	testFile = filepath.Join(tempDir, "test.txt")
 	testContent := "line1\nline2\nline3\n"
-	err := os.WriteFile(testFile, []byte(testContent), 0600)
+	err := os.WriteFile(testFile, []byte(testContent), constants.DefaultFilePermission)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
 	// 创建文件源处理器
-	processor := NewFileSourceProcessor("file-source", "Test File Source", testFile)
+	processor = NewFileSourceProcessor("file-source", "Test File Source", testFile)
 	return processor, testFile
 }
 

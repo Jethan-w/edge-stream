@@ -17,6 +17,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // StateType 状态类型
@@ -110,25 +112,25 @@ type StateConfig struct {
 	// MaxCheckpoints 最大检查点数量
 	MaxCheckpoints int `yaml:"max_checkpoints" json:"max_checkpoints"`
 	// PersistentStorage 持久化存储配置
-	PersistentStorage PersistentStorageConfig `yaml:"persistent_storage" json:"persistent_storage"`
+	PersistentStorage persistentStorageConfig `yaml:"persistent_storage" json:"persistent_storage"`
 	// DistributedConfig 分布式配置
-	DistributedConfig DistributedConfig `yaml:"distributed" json:"distributed"`
+	DistributedConfig distributedConfig `yaml:"distributed" json:"distributed"`
 }
 
-// PersistentStorageConfig 持久化存储配置
-type PersistentStorageConfig struct {
+// persistentStorageConfig 持久化存储配置
+type persistentStorageConfig struct {
 	// Type 存储类型 (file, redis, etcd)
 	Type string `yaml:"type" json:"type"`
 	// Path 文件路径 (for file type)
 	Path string `yaml:"path" json:"path"`
 	// Redis Redis配置 (for redis type)
-	Redis RedisConfig `yaml:"redis" json:"redis"`
+	Redis redisConfig `yaml:"redis" json:"redis"`
 	// Etcd Etcd配置 (for etcd type)
-	Etcd EtcdConfig `yaml:"etcd" json:"etcd"`
+	Etcd etcdConfig `yaml:"etcd" json:"etcd"`
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
+// redisConfig Redis配置
+type redisConfig struct {
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
 	Password string `yaml:"password" json:"password"`
@@ -136,16 +138,16 @@ type RedisConfig struct {
 	Prefix   string `yaml:"prefix" json:"prefix"`
 }
 
-// EtcdConfig Etcd配置
-type EtcdConfig struct {
+// etcdConfig Etcd配置
+type etcdConfig struct {
 	Endpoints []string `yaml:"endpoints" json:"endpoints"`
 	Username  string   `yaml:"username" json:"username"`
 	Password  string   `yaml:"password" json:"password"`
 	Prefix    string   `yaml:"prefix" json:"prefix"`
 }
 
-// DistributedConfig 分布式配置
-type DistributedConfig struct {
+// distributedConfig 分布式配置
+type distributedConfig struct {
 	// Enabled 是否启用分布式
 	Enabled bool `yaml:"enabled" json:"enabled"`
 	// NodeID 节点ID
@@ -161,15 +163,15 @@ type DistributedConfig struct {
 // DefaultStateConfig 默认状态配置
 func DefaultStateConfig() *StateConfig {
 	return &StateConfig{
-		CheckpointInterval: 5 * time.Minute,
-		MaxCheckpoints:     10,
-		PersistentStorage: PersistentStorageConfig{
+		CheckpointInterval: constants.DefaultCheckpointIntervalMinutes * time.Minute,
+		MaxCheckpoints:     constants.DefaultMaxCheckpoints,
+		PersistentStorage: persistentStorageConfig{
 			Type: "file",
 			Path: "./data/state",
 		},
-		DistributedConfig: DistributedConfig{
+		DistributedConfig: distributedConfig{
 			Enabled:           false,
-			ReplicationFactor: 3,
+			ReplicationFactor: constants.DefaultReplicationFactor,
 			ConsistencyLevel:  "strong",
 		},
 	}

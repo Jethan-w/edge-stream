@@ -23,6 +23,10 @@ linters-settings:
           - github.com/crazy/edge-stream/internal/flowfile
           - github.com/crazy/edge-stream/internal/constants
           - gopkg.in/yaml.v3
+          - github.com/prometheus/client_golang
+          - github.com/prometheus/common
+          - github.com/prometheus/client_model
+          - github.com/google/uuid
         deny:
           - pkg: "github.com/sirupsen/logrus"
             desc: "logging is allowed only by logutils.Log"
@@ -37,7 +41,16 @@ linters-settings:
           - github.com/crazy/edge-stream/internal/state
           - github.com/crazy/edge-stream/internal/stream
           - github.com/crazy/edge-stream/internal/flowfile
+          - github.com/crazy/edge-stream/internal/performance
+          - github.com/crazy/edge-stream/internal/windowmanager
+          - github.com/crazy/edge-stream/internal/processor
+          - github.com/crazy/edge-stream/internal/connector
+          - github.com/crazy/edge-stream/internal/constants
           - gopkg.in/yaml.v3
+          - github.com/prometheus/client_golang
+          - github.com/prometheus/common
+          - github.com/prometheus/client_model
+          - github.com/stretchr/testify
   
   dupl:
     threshold: 100

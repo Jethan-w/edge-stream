@@ -36,6 +36,7 @@ const (
 	DefaultPriority          = 2
 	DefaultSessionGap        = 30 * time.Minute
 	DefaultWatermark         = 5 * time.Second
+	DefaultFilePermissions   = 0750
 )
 
 // FileSourceConnector 文件源连接器
@@ -690,7 +691,7 @@ func parseMessageToData(msg Message) map[string]interface{} {
 }
 
 // applyAddFieldRule 应用添加字段规则
-func applyAddFieldRule(data map[string]interface{}, rule TransformRule) {
+func applyAddFieldRule(data map[string]interface{}, rule *TransformRule) {
 	field, ok := rule.Parameters["field"].(string)
 	if !ok {
 		return
@@ -704,7 +705,7 @@ func applyAddFieldRule(data map[string]interface{}, rule TransformRule) {
 }
 
 // applyTransformFieldRule 应用字段转换规则
-func applyTransformFieldRule(data map[string]interface{}, rule TransformRule) {
+func applyTransformFieldRule(data map[string]interface{}, rule *TransformRule) {
 	field, ok := rule.Parameters["field"].(string)
 	if !ok {
 		return
@@ -737,9 +738,9 @@ func (c *JSONTransformConnector) applyTransformRules(data map[string]interface{}
 
 		switch rule.Action {
 		case "add_field":
-			applyAddFieldRule(data, rule)
+			applyAddFieldRule(data, &rule)
 		case "transform_field":
-			applyTransformFieldRule(data, rule)
+			applyTransformFieldRule(data, &rule)
 		}
 	}
 }
@@ -809,7 +810,7 @@ func RegisterBuiltinConnectors(registry ConnectorRegistry) error {
 // CreateSampleDataFile 创建示例数据文件
 func CreateSampleDataFile(filePath string) error {
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, DefaultFilePermissions); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -817,7 +818,11 @@ func CreateSampleDataFile(filePath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			// Log error but don't return it as it's in defer
+		}
+	}()
 
 	// 写入示例数据
 	sampleData := []string{
@@ -835,9 +840,13 @@ func CreateSampleDataFile(filePath string) error {
 
 	for i, line := range sampleData {
 		if i > 0 {
-			file.WriteString("\n")
+			if _, err := file.WriteString("\n"); err != nil {
+				return fmt.Errorf("failed to write newline: %w", err)
+			}
 		}
-		file.WriteString(line)
+		if _, err := file.WriteString(line); err != nil {
+			return fmt.Errorf("failed to write line: %w", err)
+		}
 	}
 
 	return nil

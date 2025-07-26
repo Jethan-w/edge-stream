@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // StandardConnectorRegistry 标准连接器注册中心
@@ -280,12 +282,18 @@ func NewStandardConnectorManager(registry ConnectorRegistry, config *ConnectorCo
 		registry:   registry,
 		connectors: make(map[string]*ConnectorInstance),
 		config:     config,
-		eventChan:  make(chan ConnectorEvent, 100),
+		eventChan:  make(chan ConnectorEvent, constants.DefaultConnectorEventChannelSize),
 	}
 }
 
 // CreateConnector 创建连接器
-func (m *StandardConnectorManager) CreateConnector(ctx context.Context, id string, connectorType ConnectorType, name string, config map[string]interface{}) error {
+func (m *StandardConnectorManager) CreateConnector(
+	ctx context.Context,
+	id string,
+	connectorType ConnectorType,
+	name string,
+	config map[string]interface{},
+) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -314,7 +322,7 @@ func (m *StandardConnectorManager) CreateConnector(ctx context.Context, id strin
 	m.connectors[id] = instance
 
 	// 发送事件
-	m.sendEvent(ConnectorEventCreated, id, fmt.Sprintf("Connector '%s' created", id), nil)
+	m.sendEvent(ConnectorEventCreated, id, fmt.Sprintf("Connector '%s' created", id))
 
 	return nil
 }
@@ -337,12 +345,12 @@ func (m *StandardConnectorManager) StartConnector(ctx context.Context, id string
 
 	if err := instance.Connector.Start(ctx); err != nil {
 		instance.SetError(err)
-		m.sendEvent(ConnectorEventError, id, fmt.Sprintf("Failed to start connector: %v", err), nil)
+		m.sendEvent(ConnectorEventError, id, fmt.Sprintf("Failed to start connector: %v", err))
 		return fmt.Errorf("failed to start connector: %w", err)
 	}
 
 	instance.SetStatus(ConnectorStatusRunning)
-	m.sendEvent(ConnectorEventStarted, id, fmt.Sprintf("Connector '%s' started", id), nil)
+	m.sendEvent(ConnectorEventStarted, id, fmt.Sprintf("Connector '%s' started", id))
 
 	return nil
 }
@@ -365,12 +373,12 @@ func (m *StandardConnectorManager) StopConnector(ctx context.Context, id string)
 
 	if err := instance.Connector.Stop(ctx); err != nil {
 		instance.SetError(err)
-		m.sendEvent(ConnectorEventError, id, fmt.Sprintf("Failed to stop connector: %v", err), nil)
+		m.sendEvent(ConnectorEventError, id, fmt.Sprintf("Failed to stop connector: %v", err))
 		return fmt.Errorf("failed to stop connector: %w", err)
 	}
 
 	instance.SetStatus(ConnectorStatusStopped)
-	m.sendEvent(ConnectorEventStopped, id, fmt.Sprintf("Connector '%s' stopped", id), nil)
+	m.sendEvent(ConnectorEventStopped, id, fmt.Sprintf("Connector '%s' stopped", id))
 
 	return nil
 }
@@ -393,7 +401,7 @@ func (m *StandardConnectorManager) DeleteConnector(ctx context.Context, id strin
 	}
 
 	delete(m.connectors, id)
-	m.sendEvent(ConnectorEventDeleted, id, fmt.Sprintf("Connector '%s' deleted", id), nil)
+	m.sendEvent(ConnectorEventDeleted, id, fmt.Sprintf("Connector '%s' deleted", id))
 
 	return nil
 }
@@ -452,7 +460,7 @@ func (m *StandardConnectorManager) RestartConnector(ctx context.Context, id stri
 	}
 
 	// 等待一小段时间确保连接器完全停止
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(constants.DefaultConnectorRestartDelayMilliseconds * time.Millisecond)
 
 	if err := m.StartConnector(ctx, id); err != nil {
 		return fmt.Errorf("failed to start connector: %w", err)
@@ -484,7 +492,7 @@ func (m *StandardConnectorManager) UpdateConnectorConfig(ctx context.Context, id
 
 	// 更新实例配置
 	instance.Config = config
-	m.sendEvent(ConnectorEventUpdated, id, fmt.Sprintf("Connector '%s' configuration updated", id), nil)
+	m.sendEvent(ConnectorEventUpdated, id, fmt.Sprintf("Connector '%s' configuration updated", id))
 
 	return nil
 }
@@ -495,13 +503,13 @@ func (m *StandardConnectorManager) GetEventChannel() <-chan ConnectorEvent {
 }
 
 // sendEvent 发送事件
-func (m *StandardConnectorManager) sendEvent(eventType ConnectorEventType, connectorID, message string, metadata map[string]interface{}) {
+func (m *StandardConnectorManager) sendEvent(eventType ConnectorEventType, connectorID, message string) {
 	event := ConnectorEvent{
 		Type:        eventType,
 		ConnectorID: connectorID,
 		Timestamp:   time.Now(),
 		Message:     message,
-		Metadata:    metadata,
+		Metadata:    nil,
 	}
 
 	select {

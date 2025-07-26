@@ -208,9 +208,9 @@ func DefaultConfig() *Config {
 		Server: ServerConfig{
 			Host:         "localhost",
 			Port:         constants.DefaultHTTPPort,
-			ReadTimeout:  30 * time.Second,
-			WriteTimeout: 30 * time.Second,
-			IdleTimeout:  60 * time.Second,
+			ReadTimeout:  constants.DefaultServerReadTimeoutSeconds * time.Second,
+			WriteTimeout: constants.DefaultServerWriteTimeoutSeconds * time.Second,
+			IdleTimeout:  constants.DefaultServerIdleTimeoutSeconds * time.Second,
 		},
 		Logging: LoggingConfig{
 			Level:  "info",
@@ -220,7 +220,7 @@ func DefaultConfig() *Config {
 		Metrics: MetricsConfig{
 			Enabled:  true,
 			Endpoint: "/metrics",
-			Interval: 30 * time.Second,
+			Interval: constants.DefaultMetricsIntervalSeconds * time.Second,
 		},
 		Security: SecurityConfig{
 			TLSEnabled: false,

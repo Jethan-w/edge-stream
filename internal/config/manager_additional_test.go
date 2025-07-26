@@ -127,13 +127,13 @@ func testIntegerTypes(t *testing.T, cm ConfigManager) {
 		{"int8", int8(127), true},
 		{"int16", int16(32767), true},
 		{"int32", int32(2147483647), true},
-		{"int64", int64(2147483647), true},        // 在int范围内的int64
+		{"int64", int64(2147483647), true},                 // 在int范围内的int64
 		{"int64_large", int64(9223372036854775807), false}, // 超出int范围的int64
 		{"uint8", uint8(255), true},
 		{"uint16", uint16(65535), true},
-		{"uint32", uint32(2147483647), true},      // 在int范围内的uint32
-		{"uint32_large", uint32(4294967295), false}, // 超出int范围的uint32
-		{"uint64", uint64(2147483647), true},      // 在int范围内的uint64
+		{"uint32", uint32(2147483647), true},                  // 在int范围内的uint32
+		{"uint32_large", uint32(4294967295), false},           // 超出int范围的uint32
+		{"uint64", uint64(2147483647), true},                  // 在int范围内的uint64
 		{"uint64_large", uint64(18446744073709551615), false}, // 超出int范围的uint64
 	}
 

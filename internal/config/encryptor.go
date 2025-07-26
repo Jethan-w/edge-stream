@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 const (
@@ -150,7 +152,7 @@ func (e *AESEncryptor) DecryptSensitiveFields(config interface{}) error {
 
 // GenerateKey 生成随机加密密钥
 func GenerateKey() (string, error) {
-	key := make([]byte, 32) // 256位密钥
+	key := make([]byte, constants.AESKeySize) // 256位密钥
 	if _, err := rand.Read(key); err != nil {
 		return "", fmt.Errorf("failed to generate key: %w", err)
 	}

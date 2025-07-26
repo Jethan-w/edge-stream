@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/crazy/edge-stream/internal/constants"
 	"gopkg.in/yaml.v3"
 )
 
@@ -157,8 +158,8 @@ func (m *StandardConfigManager) flattenConfig(config map[string]interface{}, pre
 // loadEnvironmentVariables 加载环境变量
 func (m *StandardConfigManager) loadEnvironmentVariables() {
 	for _, env := range os.Environ() {
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(env, "=", constants.EnvironmentVariableParts)
+		if len(parts) != constants.EnvironmentVariableParts {
 			continue
 		}
 
@@ -224,7 +225,7 @@ func convertToInt(value interface{}) int {
 
 // convertInt64ToInt 安全地将int64转换为int
 func convertInt64ToInt(v int64) int {
-	if v > 2147483647 || v < -2147483648 {
+	if v > constants.MaxInt32Value || v < constants.MinInt32Value {
 		return 0 // 溢出时返回0
 	}
 	return int(v)
@@ -232,7 +233,7 @@ func convertInt64ToInt(v int64) int {
 
 // convertUintToInt 安全地将uint转换为int
 func convertUintToInt(v uint) int {
-	if v > 2147483647 {
+	if v > constants.MaxInt32Value {
 		return 0 // 溢出时返回0
 	}
 	return int(v)
@@ -240,7 +241,7 @@ func convertUintToInt(v uint) int {
 
 // convertUint32ToInt 安全地将uint32转换为int
 func convertUint32ToInt(v uint32) int {
-	if v > 2147483647 {
+	if v > constants.MaxInt32Value {
 		return 0 // 溢出时返回0
 	}
 	return int(v)
@@ -248,7 +249,7 @@ func convertUint32ToInt(v uint32) int {
 
 // convertUint64ToInt 安全地将uint64转换为int
 func convertUint64ToInt(v uint64) int {
-	if v > 2147483647 {
+	if v > constants.MaxInt32Value {
 		return 0 // 溢出时返回0
 	}
 	return int(v)
@@ -407,14 +408,14 @@ func (m *StandardConfigManager) Save(filename string) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal config to JSON: %w", err)
 		}
-		return os.WriteFile(filename, data, 0644)
+		return os.WriteFile(filename, data, constants.DefaultFilePermission)
 	} else {
 		// 默认使用YAML格式
 		data, err := yaml.Marshal(config)
 		if err != nil {
 			return fmt.Errorf("failed to marshal config to YAML: %w", err)
 		}
-		return os.WriteFile(filename, data, 0644)
+		return os.WriteFile(filename, data, constants.DefaultFilePermission)
 	}
 }
 

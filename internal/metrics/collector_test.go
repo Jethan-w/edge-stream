@@ -21,6 +21,15 @@ import (
 	io_prometheus_client "github.com/prometheus/client_model/go"
 )
 
+// Test constants
+const (
+	testService   = "test"
+	testOperation = "test_operation"
+	testComponent = "test_component"
+	testQueue     = "test_queue"
+	timeoutError  = "timeout"
+)
+
 // TestStandardMetricCollector 测试标准指标收集器
 func TestStandardMetricCollector(t *testing.T) {
 	collector := NewStandardMetricCollector()
@@ -66,23 +75,24 @@ func TestMetricCollectorLatency(t *testing.T) {
 
 	// 记录延迟
 	duration := 100 * time.Millisecond
-	collector.RecordLatency("test_operation", duration, map[string]string{"service": "test"})
+	collector.RecordLatency(testOperation, duration, map[string]string{"service": testService})
 
 	// 验证延迟指标被创建
 	metrics := collector.GetMetrics()
 	found := false
 	for _, metric := range metrics {
-		if metric.GetName() == "latency_seconds" && metric.GetType() == Histogram {
-			found = true
-			labels := metric.GetLabels()
-			if labels["operation"] != "test_operation" {
-				t.Errorf("Expected operation label to be 'test_operation', got '%s'", labels["operation"])
-			}
-			if labels["service"] != "test" {
-				t.Errorf("Expected service label to be 'test', got '%s'", labels["service"])
-			}
-			break
+		if metric.GetName() != "latency_seconds" || metric.GetType() != Histogram {
+			continue
 		}
+		found = true
+		labels := metric.GetLabels()
+		if labels["operation"] != testOperation {
+			t.Errorf("Expected operation label to be '%s', got '%s'", testOperation, labels["operation"])
+		}
+		if labels["service"] != testService {
+			t.Errorf("Expected service label to be '%s', got '%s'", testService, labels["service"])
+		}
+		break
 	}
 	if !found {
 		t.Error("Latency metric not found")
@@ -94,7 +104,7 @@ func TestMetricCollectorThroughput(t *testing.T) {
 	collector := NewStandardMetricCollector()
 
 	// 记录吞吐量
-	collector.RecordThroughput("test_operation", 100, map[string]string{"service": "test"})
+	collector.RecordThroughput(testOperation, 100, map[string]string{"service": testService})
 
 	// 验证吞吐量指标被创建
 	metrics := collector.GetMetrics()
@@ -103,8 +113,8 @@ func TestMetricCollectorThroughput(t *testing.T) {
 		if metric.GetName() == "throughput_total" && metric.GetType() == Counter {
 			found = true
 			labels := metric.GetLabels()
-			if labels["operation"] != "test_operation" {
-				t.Errorf("Expected operation label to be 'test_operation', got '%s'", labels["operation"])
+			if labels["operation"] != testOperation {
+				t.Errorf("Expected operation label to be '%s', got '%s'", testOperation, labels["operation"])
 			}
 			break
 		}
@@ -119,23 +129,24 @@ func TestMetricCollectorError(t *testing.T) {
 	collector := NewStandardMetricCollector()
 
 	// 记录错误
-	collector.RecordError("test_operation", "timeout", map[string]string{"service": "test"})
+	collector.RecordError(testOperation, timeoutError, map[string]string{"service": testService})
 
 	// 验证错误指标被创建
 	metrics := collector.GetMetrics()
 	found := false
 	for _, metric := range metrics {
-		if metric.GetName() == "errors_total" && metric.GetType() == Counter {
-			found = true
-			labels := metric.GetLabels()
-			if labels["operation"] != "test_operation" {
-				t.Errorf("Expected operation label to be 'test_operation', got '%s'", labels["operation"])
-			}
-			if labels["error_type"] != "timeout" {
-				t.Errorf("Expected error_type label to be 'timeout', got '%s'", labels["error_type"])
-			}
-			break
+		if metric.GetName() != "errors_total" || metric.GetType() != Counter {
+			continue
 		}
+		found = true
+		labels := metric.GetLabels()
+		if labels["operation"] != testOperation {
+			t.Errorf("Expected operation label to be '%s', got '%s'", testOperation, labels["operation"])
+		}
+		if labels["error_type"] != timeoutError {
+			t.Errorf("Expected error_type label to be '%s', got '%s'", timeoutError, labels["error_type"])
+		}
+		break
 	}
 	if !found {
 		t.Error("Error metric not found")
@@ -147,7 +158,7 @@ func TestMetricCollectorMemoryUsage(t *testing.T) {
 	collector := NewStandardMetricCollector()
 
 	// 记录内存使用
-	collector.RecordMemoryUsage("test_component", 1024*1024) // 1MB
+	collector.RecordMemoryUsage(testComponent, 1024*1024) // 1MB
 
 	// 验证内存使用指标被创建
 	metrics := collector.GetMetrics()
@@ -156,8 +167,8 @@ func TestMetricCollectorMemoryUsage(t *testing.T) {
 		if metric.GetName() == "memory_usage_bytes" && metric.GetType() == Gauge {
 			found = true
 			labels := metric.GetLabels()
-			if labels["component"] != "test_component" {
-				t.Errorf("Expected component label to be 'test_component', got '%s'", labels["component"])
+			if labels["component"] != testComponent {
+				t.Errorf("Expected component label to be '%s', got '%s'", testComponent, labels["component"])
 			}
 			break
 		}
@@ -172,7 +183,7 @@ func TestMetricCollectorQueueDepth(t *testing.T) {
 	collector := NewStandardMetricCollector()
 
 	// 记录队列深度
-	collector.RecordQueueDepth("test_queue", 50)
+	collector.RecordQueueDepth(testQueue, 50)
 
 	// 验证队列深度指标被创建
 	metrics := collector.GetMetrics()
@@ -181,8 +192,8 @@ func TestMetricCollectorQueueDepth(t *testing.T) {
 		if metric.GetName() == "queue_depth" && metric.GetType() == Gauge {
 			found = true
 			labels := metric.GetLabels()
-			if labels["queue"] != "test_queue" {
-				t.Errorf("Expected queue label to be 'test_queue', got '%s'", labels["queue"])
+			if labels["queue"] != testQueue {
+				t.Errorf("Expected queue label to be '%s', got '%s'", testQueue, labels["queue"])
 			}
 			break
 		}
@@ -197,7 +208,7 @@ func TestMetricCollectorConnectionCount(t *testing.T) {
 	collector := NewStandardMetricCollector()
 
 	// 记录连接数
-	collector.RecordConnectionCount("test_service", 25)
+	collector.RecordConnectionCount(testService, 25)
 
 	// 验证连接数指标被创建
 	metrics := collector.GetMetrics()
@@ -206,8 +217,8 @@ func TestMetricCollectorConnectionCount(t *testing.T) {
 		if metric.GetName() == "connection_count" && metric.GetType() == Gauge {
 			found = true
 			labels := metric.GetLabels()
-			if labels["service"] != "test_service" {
-				t.Errorf("Expected service label to be 'test_service', got '%s'", labels["service"])
+			if labels["service"] != testService {
+				t.Errorf("Expected service label to be '%s', got '%s'", testService, labels["service"])
 			}
 			break
 		}
@@ -252,6 +263,7 @@ func TestMetricCollectorExport(t *testing.T) {
 	jsonData, err := collector.Export("json")
 	if err != nil {
 		t.Errorf("Failed to export JSON: %v", err)
+		return
 	}
 	if len(jsonData) == 0 {
 		t.Error("JSON export returned empty data")
@@ -261,6 +273,7 @@ func TestMetricCollectorExport(t *testing.T) {
 	prometheusData, err := collector.Export("prometheus")
 	if err != nil {
 		t.Errorf("Failed to export Prometheus: %v", err)
+		return
 	}
 	if len(prometheusData) == 0 {
 		t.Error("Prometheus export returned empty data")
@@ -460,6 +473,7 @@ func TestPrometheusIntegration(t *testing.T) {
 	metricFamilies, err := registry.Gather()
 	if err != nil {
 		t.Errorf("Failed to gather metrics: %v", err)
+		return
 	}
 
 	if len(metricFamilies) == 0 {
@@ -517,6 +531,7 @@ func TestPerformanceStandards(t *testing.T) {
 		_, err := collector.Export("prometheus")
 		if err != nil {
 			t.Errorf("Export failed: %v", err)
+			return
 		}
 		duration := time.Since(start)
 
@@ -588,6 +603,7 @@ func TestMetricCollectorConcurrencyAdditional(t *testing.T) {
 					_, err := collector.Export("json")
 					if err != nil {
 						t.Errorf("Export failed: %v", err)
+						return
 					}
 					time.Sleep(2 * time.Millisecond)
 				}
@@ -645,7 +661,11 @@ func BenchmarkMetricCollector(b *testing.B) {
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, _ = collector.Export("json")
+			data, err := collector.Export("json")
+			if err != nil {
+				b.Errorf("Export failed: %v", err)
+			}
+			_ = data
 		}
 	})
 }

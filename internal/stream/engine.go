@@ -39,7 +39,7 @@ func NewStandardStreamEngine() *StandardStreamEngine {
 		topologies:   make(map[string]*StreamTopology),
 		streams:      make(map[string]*Stream), // 初始化流存储
 		runningTasks: make(map[string]context.CancelFunc),
-		eventChan:    make(chan *StreamEvent, 100),
+		eventChan:    make(chan *StreamEvent, constants.DefaultEngineEventChannelSize),
 		metrics: &EngineMetrics{
 			TopologyMetrics: make(map[string]*TopologyMetrics),
 			StartTime:       time.Now(),
@@ -213,7 +213,7 @@ func (e *StandardStreamEngine) RemoveProcessor(topologyID, processorID string) e
 	}
 
 	// 停止处理器
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DefaultProcessorStopTimeoutSeconds*time.Second)
 	defer cancel()
 	if err := processor.Stop(ctx); err != nil {
 		// 记录停止错误但继续删除

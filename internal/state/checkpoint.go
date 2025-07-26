@@ -22,6 +22,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // FileCheckpointManager 文件检查点管理器
@@ -39,7 +41,7 @@ func NewFileCheckpointManager(basePath string) *FileCheckpointManager {
 // Save 保存检查点
 func (fcm *FileCheckpointManager) Save(ctx context.Context, checkpoint *Checkpoint) error {
 	// 确保目录存在
-	if err := os.MkdirAll(fcm.basePath, 0755); err != nil {
+	if err := os.MkdirAll(fcm.basePath, constants.DefaultDirectoryPermission); err != nil {
 		return fmt.Errorf("failed to create checkpoint directory: %w", err)
 	}
 
@@ -55,7 +57,7 @@ func (fcm *FileCheckpointManager) Save(ctx context.Context, checkpoint *Checkpoi
 	filePath := filepath.Join(fcm.basePath, filename)
 
 	// 写入文件
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, data, constants.DefaultFilePermission); err != nil {
 		return fmt.Errorf("failed to write checkpoint file: %w", err)
 	}
 
@@ -116,7 +118,7 @@ func (fcm *FileCheckpointManager) List(ctx context.Context) ([]*CheckpointInfo, 
 
 		// 解析文件名获取ID和时间戳
 		parts := strings.Split(strings.TrimSuffix(file.Name(), ".json"), "_")
-		if len(parts) < 3 {
+		if len(parts) < constants.MinCheckpointFileNameParts {
 			continue
 		}
 

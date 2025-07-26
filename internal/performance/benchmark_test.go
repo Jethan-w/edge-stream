@@ -47,7 +47,7 @@ func BenchmarkConfigManager(b *testing.B) {
 	b.Run("Get", func(b *testing.B) {
 		cm := config.NewStandardConfigManager("")
 		// 预设数据
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < BenchmarkDataSetSize; i++ {
 			cm.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
 		}
 
@@ -55,7 +55,7 @@ func BenchmarkConfigManager(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			result := cm.GetString(fmt.Sprintf("get_key_%d", i%1000))
+			result := cm.GetString(fmt.Sprintf("get_key_%d", i%BenchmarkDataSetSize))
 			globalResult = result // 防止编译器优化
 		}
 	})
@@ -119,7 +119,7 @@ func BenchmarkMetricsCollector(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
 			for pb.Next() {
-				labels := map[string]string{"worker": fmt.Sprintf("%d", i%4)}
+				labels := map[string]string{"worker": fmt.Sprintf("%d", i%BenchmarkParallelWorkers)}
 				mc.RecordCounter("parallel_counter", 1.0, labels)
 				i++
 			}
@@ -159,9 +159,12 @@ func BenchmarkStateManager(b *testing.B) {
 
 	b.Run("StateGet", func(b *testing.B) {
 		sm := state.NewStandardStateManager(state.DefaultStateConfig())
-		testState, _ := sm.CreateState("benchmark_state", state.StateTypeMemory)
+		testState, err := sm.CreateState("benchmark_state", state.StateTypeMemory)
+		if err != nil {
+			b.Fatalf("Failed to create state: %v", err)
+		}
 		// 预设数据
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < BenchmarkDataSetSize; i++ {
 			err := testState.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
 			if err != nil {
 				b.Errorf("Failed to set state: %v", err)
@@ -172,7 +175,7 @@ func BenchmarkStateManager(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			result, exists := testState.Get(fmt.Sprintf("get_key_%d", i%1000))
+			result, exists := testState.Get(fmt.Sprintf("get_key_%d", i%BenchmarkDataSetSize))
 			globalResult = result
 			globalError = nil
 			if !exists {
@@ -224,7 +227,7 @@ func BenchmarkMemoryIntensive(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			b.StopTimer()
 			// 生成大数据，不计入测试时间
-			largeData := make([]byte, 1024) // 1KB数据
+			largeData := make([]byte, BenchmarkLargeDataSize) // 1KB数据
 			for j := range largeData {
 				largeData[j] = byte(i + j)
 			}
@@ -243,7 +246,7 @@ func BenchmarkMemoryIntensive(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
 			// 批量操作
-			for j := 0; j < 10; j++ {
+			for j := 0; j < BenchmarkBatchSize; j++ {
 				labels := map[string]string{
 					"batch": fmt.Sprintf("%d", i),
 					"item":  fmt.Sprintf("%d", j),
@@ -263,11 +266,14 @@ func BenchmarkConcurrentAccess(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			wg.Add(2)
+			wg.Add(BenchmarkStateOperations)
 			// 并发读写
 			go func(id int) {
 				defer wg.Done()
-				cm.Set(fmt.Sprintf("concurrent_key_%d", id), fmt.Sprintf("value_%d", id))
+				err := cm.Set(fmt.Sprintf("concurrent_key_%d", id), fmt.Sprintf("value_%d", id))
+				if err != nil {
+					globalError = err
+				}
 			}(i)
 			go func(id int) {
 				defer wg.Done()
@@ -285,7 +291,7 @@ func BenchmarkConcurrentAccess(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			wg.Add(3)
+			wg.Add(BenchmarkConcurrentOperations)
 			// 并发记录不同类型指标
 			go func(id int) {
 				defer wg.Done()
@@ -311,7 +317,10 @@ func BenchmarkSystemIntegration(b *testing.B) {
 		cm := config.NewStandardConfigManager("")
 		mc := metrics.NewStandardMetricCollector()
 		sm := state.NewStandardStateManager(state.DefaultStateConfig())
-		testState, _ := sm.CreateState("integration_state", state.StateTypeMemory)
+		testState, err := sm.CreateState("integration_state", state.StateTypeMemory)
+		if err != nil {
+			b.Fatalf("Failed to create state: %v", err)
+		}
 
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -322,10 +331,13 @@ func BenchmarkSystemIntegration(b *testing.B) {
 			value := fmt.Sprintf("workflow_value_%d", i)
 
 			// 1. 配置操作
-			cm.Set(key, value)
+			err := cm.Set(key, value)
+			if err != nil {
+				globalError = err
+			}
 
 			// 2. 状态操作
-			err := testState.Set(key, value)
+			err = testState.Set(key, value)
 			if err != nil {
 				b.Errorf("Failed to set state: %v", err)
 			}

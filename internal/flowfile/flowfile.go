@@ -11,6 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package flowfile provides data flow management capabilities for EdgeStream.
+// It defines the FlowFile structure which represents the basic unit of data
+// transfer within the streaming pipeline.
 package flowfile
 
 import (
@@ -41,7 +44,7 @@ func NewFlowFile() *FlowFile {
 	}
 }
 
-// 工具函数
+// GenerateUUID generates a unique identifier for FlowFile
 func GenerateUUID() string {
 	// 这里应该使用实际的UUID生成库
 	// 例如：github.com/google/uuid

@@ -349,9 +349,13 @@ func (sm *StandardStateManager) Export() ([]byte, error) {
 	}
 
 	// 导出所有状态数据
+	statesMap, ok := exportData["states"].(map[string]map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("failed to cast states map")
+	}
 	for name, state := range sm.states {
 		if memoryState, ok := state.(*MemoryState); ok {
-			exportData["states"].(map[string]map[string]interface{})[name] = memoryState.GetData()
+			statesMap[name] = memoryState.GetData()
 		}
 	}
 

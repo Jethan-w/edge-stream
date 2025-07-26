@@ -106,7 +106,7 @@ func (c *StandardMetricCollector) RecordThroughput(operation string, count int64
 }
 
 // RecordError 记录错误指标
-func (c *StandardMetricCollector) RecordError(operation string, errorType string, labels map[string]string) {
+func (c *StandardMetricCollector) RecordError(operation, errorType string, labels map[string]string) {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
