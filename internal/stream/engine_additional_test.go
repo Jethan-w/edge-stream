@@ -70,83 +70,108 @@ func TestStreamEngineEdgeCases(t *testing.T) {
 }
 
 // TestStreamEngineErrorRecovery 测试错误恢复
+// 辅助函数：创建错误恢复处理器
+func createErrorRecoveryProcessor(errorCount *int) *TestProcessor {
+	processor := NewTestProcessor("error-recovery-processor", "Error Recovery Processor")
+	processor.SetProcessFunc(func(ff *flowfile.FlowFile) (*flowfile.FlowFile, error) {
+		*errorCount++
+		if *errorCount <= 3 {
+			return nil, errors.New("temporary error")
+		}
+		return ff, nil
+	})
+	return processor
+}
+
+// 辅助函数：测试处理器错误恢复
+func testProcessorErrorRecovery(t *testing.T, engine *StandardStreamEngine) {
+	stream := NewStream("error-recovery")
+	errorCount := 0
+	processor := createErrorRecoveryProcessor(&errorCount)
+	stream.AddProcessor(processor)
+	engine.AddStream(stream)
+
+	// 多次处理，测试错误恢复
+	for i := 0; i < 5; i++ {
+		ff := flowfile.NewFlowFile()
+		ff.SetAttribute("attempt", fmt.Sprintf("%d", i))
+		result := stream.Process(ff)
+		if i < 3 {
+			if result != nil {
+				t.Errorf("Expected nil result for error case %d", i)
+			}
+		} else {
+			if result == nil {
+				t.Errorf("Expected successful result for case %d", i)
+			}
+		}
+	}
+}
+
+// 辅助函数：测试重复拓扑创建
+func testDuplicateTopologyCreation(t *testing.T, engine *StandardStreamEngine) (*StreamTopology, error) {
+	topology1, err := engine.CreateTopology("duplicate-topo", "Topology 1", "First topology")
+	if err != nil {
+		t.Fatalf("Failed to create first topology: %v", err)
+	}
+
+	topology2, err := engine.CreateTopology("duplicate-topo", "Topology 2", "Second topology")
+	if err == nil {
+		t.Error("Should not allow duplicate topology IDs")
+	}
+	if topology2 != nil {
+		t.Error("Duplicate topology should be nil")
+	}
+
+	return topology1, err
+}
+
+// 辅助函数：测试无效拓扑操作
+func testInvalidTopologyOperations(t *testing.T, engine *StandardStreamEngine) {
+	// 测试向不存在的拓扑添加处理器
+	processor := NewTestProcessor("orphan-processor", "Orphan Processor")
+	err := engine.AddProcessor("non-existent-topology", processor)
+	if err == nil {
+		t.Error("Should not allow adding processor to non-existent topology")
+	}
+
+	// 测试启动不存在的拓扑
+	ctx := context.Background()
+	err = engine.StartTopology(ctx, "non-existent-topology")
+	if err == nil {
+		t.Error("Should not allow starting non-existent topology")
+	}
+
+	// 测试停止不存在的拓扑
+	err = engine.StopTopology(ctx, "non-existent-topology")
+	if err == nil {
+		t.Error("Should not allow stopping non-existent topology")
+	}
+}
+
+// 辅助函数：清理拓扑
+func cleanupTopology(t *testing.T, engine *StandardStreamEngine, topology *StreamTopology) {
+	if topology != nil {
+		ctx := context.Background()
+		if err := engine.StopTopology(ctx, topology.ID); err != nil {
+			t.Logf("Failed to stop topology: %v", err)
+		}
+	}
+}
+
 func TestStreamEngineErrorRecovery(t *testing.T) {
 	engine := NewStandardStreamEngine()
 
 	// 测试处理器错误恢复
 	t.Run("ProcessorErrorRecovery", func(t *testing.T) {
-		stream := NewStream("error-recovery")
-		errorCount := 0
-		processor := NewTestProcessor("error-recovery-processor", "Error Recovery Processor")
-		processor.SetProcessFunc(func(ff *flowfile.FlowFile) (*flowfile.FlowFile, error) {
-			errorCount++
-			if errorCount <= 3 {
-				return nil, errors.New("temporary error")
-			}
-			return ff, nil
-		})
-		stream.AddProcessor(processor)
-		engine.AddStream(stream)
-
-		// 多次处理，测试错误恢复
-		for i := 0; i < 5; i++ {
-			ff := flowfile.NewFlowFile()
-			ff.SetAttribute("attempt", fmt.Sprintf("%d", i))
-			result := stream.Process(ff)
-			if i < 3 {
-				if result != nil {
-					t.Errorf("Expected nil result for error case %d", i)
-				}
-			} else {
-				if result == nil {
-					t.Errorf("Expected successful result for case %d", i)
-				}
-			}
-		}
+		testProcessorErrorRecovery(t, engine)
 	})
 
 	// 测试拓扑错误处理
 	t.Run("TopologyErrorHandling", func(t *testing.T) {
-		// 测试创建重复拓扑
-		topology1, err := engine.CreateTopology("duplicate-topo", "Topology 1", "First topology")
-		if err != nil {
-			t.Fatalf("Failed to create first topology: %v", err)
-		}
-
-		topology2, err := engine.CreateTopology("duplicate-topo", "Topology 2", "Second topology")
-		if err == nil {
-			t.Error("Should not allow duplicate topology IDs")
-		}
-		if topology2 != nil {
-			t.Error("Duplicate topology should be nil")
-		}
-
-		// 测试向不存在的拓扑添加处理器
-		processor := NewTestProcessor("orphan-processor", "Orphan Processor")
-		err = engine.AddProcessor("non-existent-topology", processor)
-		if err == nil {
-			t.Error("Should not allow adding processor to non-existent topology")
-		}
-
-		// 测试启动不存在的拓扑
-		ctx := context.Background()
-		err = engine.StartTopology(ctx, "non-existent-topology")
-		if err == nil {
-			t.Error("Should not allow starting non-existent topology")
-		}
-
-		// 测试停止不存在的拓扑
-		err = engine.StopTopology(ctx, "non-existent-topology")
-		if err == nil {
-			t.Error("Should not allow stopping non-existent topology")
-		}
-
-		// 清理
-		if topology1 != nil {
-			if err := engine.StopTopology(ctx, topology1.ID); err != nil {
-				t.Logf("Failed to stop topology: %v", err)
-			}
-		}
+		topology1, _ := testDuplicateTopologyCreation(t, engine)
+		testInvalidTopologyOperations(t, engine)
+		cleanupTopology(t, engine, topology1)
 	})
 }
 

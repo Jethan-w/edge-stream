@@ -42,11 +42,11 @@ type StandardStateManager struct {
 	wg     sync.WaitGroup
 
 	// 指标
-	metrics *StateManagerMetrics
+	metrics *internalStateManagerMetrics
 }
 
-// StateManagerMetrics 状态管理器指标
-type StateManagerMetrics struct {
+// internalStateManagerMetrics 内部状态管理器指标（带锁）
+type internalStateManagerMetrics struct {
 	mu sync.RWMutex
 
 	StatesCount      int64     `json:"states_count"`
@@ -70,7 +70,7 @@ func NewStandardStateManager(config *StateConfig) *StandardStateManager {
 		config: config,
 		ctx:    ctx,
 		cancel: cancel,
-		metrics: &StateManagerMetrics{
+		metrics: &internalStateManagerMetrics{
 			StartTime: time.Now(),
 		},
 	}

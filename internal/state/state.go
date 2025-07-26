@@ -66,6 +66,12 @@ type StateManager interface {
 	RestoreFromCheckpoint(ctx context.Context, checkpoint *Checkpoint) error
 	// Watch 监听状态变更
 	Watch(ctx context.Context, callback StateChangeCallback)
+	// GetCheckpointManager 获取检查点管理器
+	GetCheckpointManager() CheckpointManager
+	// GetMetrics 获取状态管理器指标
+	GetMetrics() StateManagerMetrics
+	// Export 导出状态数据
+	Export() ([]byte, error)
 	// Close 关闭状态管理器
 	Close() error
 }
@@ -218,6 +224,16 @@ type StateMetrics struct {
 
 	// 错误指标
 	ErrorCount int64 `json:"error_count"`
+}
+
+// StateManagerMetrics 状态管理器指标
+type StateManagerMetrics struct {
+	StatesCount      int64     `json:"states_count"`
+	CheckpointsCount int64     `json:"checkpoints_count"`
+	LastCheckpointAt time.Time `json:"last_checkpoint_at"`
+	TotalOperations  int64     `json:"total_operations"`
+	ErrorsCount      int64     `json:"errors_count"`
+	StartTime        time.Time `json:"start_time"`
 }
 
 // IncrementOperation 增加操作计数

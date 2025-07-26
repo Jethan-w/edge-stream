@@ -230,77 +230,93 @@ func testComplexTypes(t *testing.T, cm ConfigManager) {
 }
 
 // TestConfigManagerAdvancedConcurrency 测试高级并发安全场景
+// 辅助函数：执行并发写入操作
+func runConcurrentWrites(t *testing.T, cm ConfigManager, wg *sync.WaitGroup, numGoroutines, numOperations int) {
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("concurrent.write.%d.%d", id, j)
+				value := fmt.Sprintf("value-%d-%d", id, j)
+				err := cm.Set(key, value)
+				if err != nil {
+					t.Errorf("Concurrent write failed: %v", err)
+				}
+			}
+		}(i)
+	}
+}
+
+// 辅助函数：执行并发读取操作
+func runConcurrentReads(t *testing.T, cm ConfigManager, wg *sync.WaitGroup, numGoroutines, numOperations int) {
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("concurrent.read.%d", id)
+				_ = cm.Set(key, "test-value")
+				value := cm.GetString(key)
+				if value != "test-value" {
+					t.Errorf("Concurrent read failed: expected 'test-value', got '%s'", value)
+				}
+			}
+		}(i)
+	}
+}
+
+// 辅助函数：测试并发读写
+func testConcurrentReadWrite(t *testing.T, cm ConfigManager) {
+	var wg sync.WaitGroup
+	const numGoroutines = 10
+	const numOperations = 100
+
+	runConcurrentWrites(t, cm, &wg, numGoroutines, numOperations)
+	runConcurrentReads(t, cm, &wg, numGoroutines, numOperations)
+	wg.Wait()
+}
+
+// 辅助函数：测试并发更新同一键
+func testConcurrentUpdateSameKey(t *testing.T, cm ConfigManager) {
+	var wg sync.WaitGroup
+	const numGoroutines = 10
+	const numOperations = 100
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < numOperations; j++ {
+				value := fmt.Sprintf("value-%d-%d", id, j)
+				err := cm.Set("shared.key", value)
+				if err != nil {
+					t.Errorf("Concurrent update failed: %v", err)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// 验证最终值存在
+	finalValue := cm.GetString("shared.key")
+	if finalValue == "" {
+		t.Error("Final value should not be empty")
+	}
+}
+
 func TestConfigManagerAdvancedConcurrency(t *testing.T) {
 	cm := NewStandardConfigManager("")
 
 	// 测试并发读写
 	t.Run("ConcurrentReadWrite", func(t *testing.T) {
-		var wg sync.WaitGroup
-		const numGoroutines = 10
-		const numOperations = 100
-
-		// 并发写入
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOperations; j++ {
-					key := fmt.Sprintf("concurrent.write.%d.%d", id, j)
-					value := fmt.Sprintf("value-%d-%d", id, j)
-					err := cm.Set(key, value)
-					if err != nil {
-						t.Errorf("Concurrent write failed: %v", err)
-					}
-				}
-			}(i)
-		}
-
-		// 并发读取
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOperations; j++ {
-					key := fmt.Sprintf("concurrent.read.%d", id)
-					_ = cm.Set(key, "test-value")
-					value := cm.GetString(key)
-					if value != "test-value" {
-						t.Errorf("Concurrent read failed: expected 'test-value', got '%s'", value)
-					}
-				}
-			}(i)
-		}
-
-		wg.Wait()
+		testConcurrentReadWrite(t, cm)
 	})
 
 	// 测试并发更新同一键
 	t.Run("ConcurrentUpdateSameKey", func(t *testing.T) {
-		var wg sync.WaitGroup
-		const numGoroutines = 10
-		const numOperations = 100
-
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOperations; j++ {
-					value := fmt.Sprintf("value-%d-%d", id, j)
-					err := cm.Set("shared.key", value)
-					if err != nil {
-						t.Errorf("Concurrent update failed: %v", err)
-					}
-				}
-			}(i)
-		}
-
-		wg.Wait()
-
-		// 验证最终值存在
-		finalValue := cm.GetString("shared.key")
-		if finalValue == "" {
-			t.Error("Final value should not be empty")
-		}
+		testConcurrentUpdateSameKey(t, cm)
 	})
 }
 

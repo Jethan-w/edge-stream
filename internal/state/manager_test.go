@@ -162,88 +162,106 @@ func testClearAll(t *testing.T, sm StateManager) {
 	}
 }
 
+// 辅助函数：并发写入操作
+func runConcurrentWrites(t *testing.T, sm StateManager, numGoroutines, numOperations int) {
+	var wg sync.WaitGroup
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("key_%d_%d", id, j)
+				value := fmt.Sprintf("value_%d_%d", id, j)
+				state, _ := sm.CreateState(fmt.Sprintf("state_%d_%d", id, j), StateTypeMemory)
+				if err := state.Set(key, value); err != nil {
+					t.Errorf("Failed to set key %s: %v", key, err)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// 辅助函数：并发读取操作
+func runConcurrentReads(t *testing.T, sm StateManager, numGoroutines, numOperations int) {
+	var wg sync.WaitGroup
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < numOperations; j++ {
+				key := fmt.Sprintf("key_%d_%d", id, j)
+				if state, exists := sm.GetState(fmt.Sprintf("state_%d_%d", id, j)); exists {
+					_, _ = state.Get(key)
+					_ = state.Exists(key)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// 辅助函数：设置删除测试的初始状态
+func setupDeleteTestStates(t *testing.T, sm StateManager, count int) []State {
+	states := make([]State, count)
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("delete_key_%d", i)
+		state, _ := sm.CreateState(fmt.Sprintf("delete_state_%d", i), StateTypeMemory)
+		if err := state.Set(key, "value"); err != nil {
+			t.Errorf("Failed to set key %s: %v", key, err)
+		}
+		states[i] = state
+	}
+	return states
+}
+
+// 辅助函数：并发删除操作
+func runConcurrentDeletes(t *testing.T, sm StateManager, count int) {
+	var wg sync.WaitGroup
+	for i := 0; i < count; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			key := fmt.Sprintf("delete_key_%d", id)
+			if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", id)); exists {
+				if err := state.Delete(key); err != nil {
+					t.Logf("Failed to delete key %s: %v", key, err)
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
+}
+
+// 辅助函数：验证删除结果
+func verifyDeletions(t *testing.T, sm StateManager, count int) {
+	for i := 0; i < count; i++ {
+		key := fmt.Sprintf("delete_key_%d", i)
+		if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", i)); exists {
+			if state.Exists(key) {
+				t.Errorf("Expected key %s to be deleted", key)
+			}
+		}
+	}
+}
+
 func TestStateManagerConcurrency(t *testing.T) {
 	sm := NewStandardStateManager(nil)
 
 	// 并发读写测试
 	t.Run("ConcurrentReadWrite", func(t *testing.T) {
-		var wg sync.WaitGroup
 		numGoroutines := 10
 		numOperations := 100
-
-		// 并发写入
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOperations; j++ {
-					key := fmt.Sprintf("key_%d_%d", id, j)
-					value := fmt.Sprintf("value_%d_%d", id, j)
-					state, _ := sm.CreateState(fmt.Sprintf("state_%d_%d", id, j), StateTypeMemory)
-					if err := state.Set(key, value); err != nil {
-						t.Errorf("Failed to set key %s: %v", key, err)
-					}
-				}
-			}(i)
-		}
-
-		// 并发读取
-		for i := 0; i < numGoroutines; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				for j := 0; j < numOperations; j++ {
-					key := fmt.Sprintf("key_%d_%d", id, j)
-					if state, exists := sm.GetState(fmt.Sprintf("state_%d_%d", id, j)); exists {
-						_, _ = state.Get(key)
-						_ = state.Exists(key)
-					}
-				}
-			}(i)
-		}
-
-		wg.Wait()
+		runConcurrentWrites(t, sm, numGoroutines, numOperations)
+		runConcurrentReads(t, sm, numGoroutines, numOperations)
 	})
 
 	// 并发删除测试
 	t.Run("ConcurrentDelete", func(t *testing.T) {
-		// 预先设置一些状态
-		states := make([]State, 100)
-		for i := 0; i < 100; i++ {
-			key := fmt.Sprintf("delete_key_%d", i)
-			state, _ := sm.CreateState(fmt.Sprintf("delete_state_%d", i), StateTypeMemory)
-			if err := state.Set(key, "value"); err != nil {
-				t.Errorf("Failed to set key %s: %v", key, err)
-			}
-			states[i] = state
-		}
-
-		var wg sync.WaitGroup
-		// 并发删除
-		for i := 0; i < 100; i++ {
-			wg.Add(1)
-			go func(id int) {
-				defer wg.Done()
-				key := fmt.Sprintf("delete_key_%d", id)
-				if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", id)); exists {
-					if err := state.Delete(key); err != nil {
-						t.Logf("Failed to delete key %s: %v", key, err)
-					}
-				}
-			}(i)
-		}
-
-		wg.Wait()
-
-		// 验证所有状态都被删除
-		for i := 0; i < 100; i++ {
-			key := fmt.Sprintf("delete_key_%d", i)
-			if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", i)); exists {
-				if state.Exists(key) {
-					t.Errorf("Expected key %s to be deleted", key)
-				}
-			}
-		}
+		count := 100
+		_ = setupDeleteTestStates(t, sm, count)
+		runConcurrentDeletes(t, sm, count)
+		verifyDeletions(t, sm, count)
 	})
 }
 
@@ -332,51 +350,98 @@ func TestCheckpointManager(t *testing.T) {
 	})
 }
 
+// 辅助函数：基准测试Set操作
+func benchmarkSetState(b *testing.B, state State) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("bench_key_%d", i)
+		if err := state.Set(key, "benchmark_value"); err != nil {
+			b.Errorf("Failed to set key %s: %v", key, err)
+		}
+	}
+}
+
+// 辅助函数：为Get基准测试准备数据
+func prepareGetBenchmarkData(b *testing.B, state State) {
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("get_bench_key_%d", i)
+		if err := state.Set(key, "value"); err != nil {
+			b.Errorf("Failed to set key %s: %v", key, err)
+		}
+	}
+}
+
+// 辅助函数：基准测试Get操作
+func benchmarkGetState(b *testing.B, state State) {
+	prepareGetBenchmarkData(b, state)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("get_bench_key_%d", i%1000)
+		_, _ = state.Get(key)
+	}
+}
+
+// 辅助函数：为Exists基准测试准备数据
+func prepareExistsBenchmarkData(b *testing.B, state State) {
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("has_bench_key_%d", i)
+		if err := state.Set(key, "value"); err != nil {
+			b.Errorf("Failed to set key %s: %v", key, err)
+		}
+	}
+}
+
+// 辅助函数：基准测试Exists操作
+func benchmarkExistsState(b *testing.B, state State) {
+	prepareExistsBenchmarkData(b, state)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("has_bench_key_%d", i%1000)
+		state.Exists(key)
+	}
+}
+
 func BenchmarkStateManager(b *testing.B) {
 	sm := NewStandardStateManager(nil)
 	state, _ := sm.CreateState("bench_state", StateTypeMemory)
 
 	b.Run("SetState", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("bench_key_%d", i)
-			if err := state.Set(key, "benchmark_value"); err != nil {
-				b.Errorf("Failed to set key %s: %v", key, err)
-			}
-		}
+		benchmarkSetState(b, state)
 	})
 
 	b.Run("GetState", func(b *testing.B) {
-		// 预先设置一些状态
-		for i := 0; i < 1000; i++ {
-			key := fmt.Sprintf("get_bench_key_%d", i)
-			if err := state.Set(key, "value"); err != nil {
-				b.Errorf("Failed to set key %s: %v", key, err)
-			}
-		}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("get_bench_key_%d", i%1000)
-			_, _ = state.Get(key)
-		}
+		benchmarkGetState(b, state)
 	})
 
 	b.Run("HasState", func(b *testing.B) {
-		// 预先设置一些状态
-		for i := 0; i < 1000; i++ {
-			key := fmt.Sprintf("has_bench_key_%d", i)
-			if err := state.Set(key, "value"); err != nil {
-				b.Errorf("Failed to set key %s: %v", key, err)
-			}
-		}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			key := fmt.Sprintf("has_bench_key_%d", i%1000)
-			state.Exists(key)
-		}
+		benchmarkExistsState(b, state)
 	})
+}
+
+// 辅助函数：测试单次Set操作性能
+func testSingleSetPerformance(t *testing.T, state State) {
+	start := time.Now()
+	if err := state.Set("perf_test", "value"); err != nil {
+		t.Errorf("Failed to set key: %v", err)
+	}
+	duration := time.Since(start)
+
+	// 单次操作应该在100μs内完成
+	if duration > 100*time.Microsecond {
+		t.Errorf("Single Set took %v, expected < 100μs", duration)
+	}
+}
+
+// 辅助函数：测试单次Get操作性能
+func testSingleGetPerformance(t *testing.T, state State) {
+	start := time.Now()
+	_, _ = state.Get("perf_test")
+	duration := time.Since(start)
+
+	// 单次获取应该在50μs内完成
+	if duration > 50*time.Microsecond {
+		t.Errorf("Single Get took %v, expected < 50μs", duration)
+	}
 }
 
 // 性能标准测试
@@ -386,66 +451,17 @@ func TestStateManagerPerformanceStandards(t *testing.T) {
 
 	// 测试单次操作性能
 	t.Run("SingleOperationPerformance", func(t *testing.T) {
-		start := time.Now()
-		if err := state.Set("perf_test", "value"); err != nil {
-			t.Errorf("Failed to set key: %v", err)
-		}
-		duration := time.Since(start)
-
-		// 单次操作应该在100μs内完成
-		if duration > 100*time.Microsecond {
-			t.Errorf("Single Set took %v, expected < 100μs", duration)
-		}
-
-		start = time.Now()
-		_, _ = state.Get("perf_test")
-		duration = time.Since(start)
-
-		// 单次获取应该在50μs内完成
-		if duration > 50*time.Microsecond {
-			t.Errorf("Single Get took %v, expected < 50μs", duration)
-		}
+		testSingleSetPerformance(t, state)
+		testSingleGetPerformance(t, state)
 	})
 
 	// 测试批量操作性能
 	t.Run("BatchOperationPerformance", func(t *testing.T) {
-		numOps := 10000
-		start := time.Now()
-
-		for i := 0; i < numOps; i++ {
-			key := fmt.Sprintf("batch_key_%d", i)
-			if err := state.Set(key, "value"); err != nil {
-				t.Errorf("Failed to set key %s: %v", key, err)
-			}
-		}
-
-		duration := time.Since(start)
-		opsPerSecond := float64(numOps) / duration.Seconds()
-
-		// 应该能够处理至少500,000 ops/sec
-		if opsPerSecond < 500000 {
-			t.Errorf("Batch Set: %.0f ops/sec, expected >= 500,000 ops/sec", opsPerSecond)
-		}
+		testBatchOperationPerformance(t, state)
 	})
 
 	// 测试内存使用效率
 	t.Run("MemoryEfficiency", func(t *testing.T) {
-		// 存储大量状态
-		numStates := 100000
-		for i := 0; i < numStates; i++ {
-			key := fmt.Sprintf("memory_test_%d", i)
-			value := fmt.Sprintf("value_%d", i)
-			if err := state.Set(key, value); err != nil {
-				t.Errorf("Failed to set key %s: %v", key, err)
-			}
-		}
-
-		// 验证所有状态都能正确访问
-		for i := 0; i < 1000; i++ { // 抽样检查
-			key := fmt.Sprintf("memory_test_%d", i*100)
-			if !state.Exists(key) {
-				t.Errorf("State %s should exist", key)
-			}
-		}
+		testMemoryEfficiency(t, state)
 	})
 }

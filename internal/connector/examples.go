@@ -218,6 +218,63 @@ func (c *FileSourceConnector) Configure(config map[string]interface{}) error {
 }
 
 // Read 读取数据
+// 辅助函数：检查连接器状态
+func (c *FileSourceConnector) checkConnectorStatus() bool {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.running && c.scanner != nil
+}
+
+// 辅助函数：创建消息
+func (c *FileSourceConnector) createMessage(line string) Message {
+	msg := NewStandardMessage(fmt.Sprintf("line_%d", atomic.AddInt64(&c.offset, 1)), line)
+	msg.SetOffset(c.offset)
+	msg.SetHeader("source", "file")
+	return msg
+}
+
+// 辅助函数：发送消息
+func (c *FileSourceConnector) sendMessage(ctx context.Context, msgCh chan Message, msg Message) bool {
+	select {
+	case msgCh <- msg:
+		atomic.AddInt64(&c.metrics.MessagesProcessed, 1)
+		if value, ok := msg.GetValue().(string); ok {
+			atomic.AddInt64(&c.metrics.BytesProcessed, int64(len(value)))
+		}
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+// 辅助函数：处理扫描错误
+func (c *FileSourceConnector) handleScanError(ctx context.Context, errCh chan error) {
+	if err := c.scanner.Err(); err != nil {
+		select {
+		case errCh <- err:
+			atomic.AddInt64(&c.metrics.ErrorsCount, 1)
+		case <-ctx.Done():
+		}
+	}
+}
+
+// 辅助函数：处理单行数据
+func (c *FileSourceConnector) processLine(ctx context.Context, msgCh chan Message, errCh chan error) bool {
+	if c.scanner.Scan() {
+		line := c.scanner.Text()
+		if line != "" {
+			msg := c.createMessage(line)
+			if !c.sendMessage(ctx, msgCh, msg) {
+				return false // context canceled
+			}
+		}
+		return true
+	} else {
+		c.handleScanError(ctx, errCh)
+		return false // EOF or error
+	}
+}
+
 func (c *FileSourceConnector) Read(ctx context.Context) (msgChan <-chan Message, errChan <-chan error) {
 	msgCh := make(chan Message, DefaultChannelBufferSize)
 	errCh := make(chan error, DefaultErrorChannelSize)
@@ -231,37 +288,12 @@ func (c *FileSourceConnector) Read(ctx context.Context) (msgChan <-chan Message,
 			case <-ctx.Done():
 				return
 			default:
-				c.mutex.RLock()
-				if !c.running || c.scanner == nil {
-					c.mutex.RUnlock()
+				if !c.checkConnectorStatus() {
 					return
 				}
-				c.mutex.RUnlock()
 
-				if c.scanner.Scan() {
-					line := c.scanner.Text()
-					if line != "" {
-						msg := NewStandardMessage(fmt.Sprintf("line_%d", atomic.AddInt64(&c.offset, 1)), line)
-						msg.SetOffset(c.offset)
-						msg.SetHeader("source", "file")
-
-						select {
-						case msgCh <- msg:
-							atomic.AddInt64(&c.metrics.MessagesProcessed, 1)
-							atomic.AddInt64(&c.metrics.BytesProcessed, int64(len(line)))
-						case <-ctx.Done():
-							return
-						}
-					}
-				} else {
-					if err := c.scanner.Err(); err != nil {
-						select {
-						case errCh <- err:
-							atomic.AddInt64(&c.metrics.ErrorsCount, 1)
-						case <-ctx.Done():
-						}
-					}
-					return // EOF
+				if !c.processLine(ctx, msgCh, errCh) {
+					return
 				}
 			}
 		}
