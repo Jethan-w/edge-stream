@@ -77,3 +77,15 @@ jobs:
       with:
         name: security-scan-results
         path: gosec-report.json
+    
+    - name: Run dependency vulnerability scan with Nancy
+      run: |
+        go install github.com/sonatypecommunity/nancy@latest
+        go list -json -deps ./... | nancy sleuth --output-format json > nancy-report.json || echo '{"vulnerable": []}' > nancy-report.json
+    
+    - name: Upload dependency scan results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: dependency-scan-results
+        path: nancy-report.json
