@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stream
 
 import (
@@ -84,7 +97,9 @@ func TestStreamEngine(t *testing.T) {
 		// 停止拓扑
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer stopCancel()
-		engine.StopTopology(stopCtx, topology.ID)
+		if err := engine.StopTopology(stopCtx, topology.ID); err != nil {
+			t.Logf("Failed to stop topology: %v", err)
+		}
 	})
 
 	// 测试引擎停止
@@ -92,10 +107,22 @@ func TestStreamEngine(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		done := make(chan bool)
 
+		errChan := make(chan error, 1)
 		go func() {
-			engine.Start(ctx)
+			if err := engine.Start(ctx); err != nil {
+				errChan <- err
+				return
+			}
 			done <- true
 		}()
+
+		// 检查启动错误
+		select {
+		case err := <-errChan:
+			t.Fatalf("Failed to start engine: %v", err)
+		case <-time.After(100 * time.Millisecond):
+			// 启动成功，继续
+		}
 
 		// 等待引擎启动
 		time.Sleep(100 * time.Millisecond)
@@ -194,7 +221,9 @@ func TestStreamConcurrency(t *testing.T) {
 	// 停止拓扑
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer stopCancel()
-	engine.StopTopology(stopCtx, topology.ID)
+	if err := engine.StopTopology(stopCtx, topology.ID); err != nil {
+		t.Logf("Failed to stop topology: %v", err)
+	}
 }
 
 func BenchmarkStreamEngine(b *testing.B) {
@@ -214,9 +243,24 @@ func BenchmarkStreamEngine(b *testing.B) {
 	defer cancel()
 
 	// 启动引擎
+	errChan := make(chan error, 1)
 	go func() {
-		engine.Start(ctx)
+		if err := engine.Start(ctx); err != nil {
+			errChan <- err
+			return
+		}
+		errChan <- nil
 	}()
+
+	// 检查启动错误
+	select {
+	case err := <-errChan:
+		if err != nil {
+			b.Fatalf("Failed to start engine: %v", err)
+		}
+	case <-time.After(1 * time.Second):
+		b.Fatal("Engine start timeout")
+	}
 
 	// 等待引擎启动
 	time.Sleep(100 * time.Millisecond)
@@ -233,6 +277,79 @@ func BenchmarkStreamEngine(b *testing.B) {
 
 // 性能标准测试
 func TestStreamPerformanceStandards(t *testing.T) {
+	t.Run("ThroughputTest", testThroughputPerformance)
+	t.Run("LatencyTest", testLatencyPerformance)
+}
+
+func testThroughputPerformance(t *testing.T) {
+	engine := NewStandardStreamEngine()
+
+	// 创建拓扑和处理器
+	topology, err := engine.CreateTopology("throughput-topology", "Throughput Topology", "Topology for throughput testing")
+	if err != nil {
+		t.Fatalf("Failed to create topology: %v", err)
+	}
+
+	var processedCount int64
+	processor := NewTestProcessor("throughput-processor", "Throughput Processor")
+	processor.SetProcessFunc(func(ff *flowfile.FlowFile) (*flowfile.FlowFile, error) {
+		atomic.AddInt64(&processedCount, 1)
+		return ff, nil
+	})
+
+	err = engine.AddProcessor(topology.ID, processor)
+	if err != nil {
+		t.Fatalf("Failed to add processor: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 启动拓扑
+	err = engine.StartTopology(ctx, topology.ID)
+	if err != nil {
+		t.Fatalf("Failed to start topology: %v", err)
+	}
+
+	// 等待拓扑启动
+	time.Sleep(100 * time.Millisecond)
+
+	numItems := 10000
+	start := time.Now()
+
+	for i := 0; i < numItems; i++ {
+		message := &Message{
+			ID:        fmt.Sprintf("msg-%d", i),
+			Data:      fmt.Sprintf("throughput content %d", i),
+			Timestamp: time.Now(),
+		}
+		// 直接调用处理器处理消息
+		_, err := processor.Process(context.Background(), message)
+		if err != nil {
+			t.Errorf("Failed to process message: %v", err)
+		}
+	}
+
+	// 等待处理完成
+	time.Sleep(100 * time.Millisecond)
+
+	duration := time.Since(start)
+	throughput := float64(atomic.LoadInt64(&processedCount)) / duration.Seconds()
+
+	// 应该能够处理至少5000 items/sec
+	if throughput < 5000 {
+		t.Errorf("Throughput: %.0f items/sec, expected >= 5000 items/sec", throughput)
+	}
+
+	// 停止拓扑
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer stopCancel()
+	if err := engine.StopTopology(stopCtx, topology.ID); err != nil {
+		t.Logf("Failed to stop topology: %v", err)
+	}
+}
+
+func testLatencyPerformance(t *testing.T) {
 	engine := NewStandardStreamEngine()
 	stream := NewStream("performance_test")
 
@@ -245,110 +362,29 @@ func TestStreamPerformanceStandards(t *testing.T) {
 	stream.AddProcessor(processor)
 	engine.AddStream(stream)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	latencies := make([]time.Duration, 100)
 
-	// 启动引擎
-	go func() {
-		engine.Start(ctx)
-	}()
-
-	// 等待引擎启动
-	time.Sleep(100 * time.Millisecond)
-
-	// 测试吞吐量
-	t.Run("ThroughputTest", func(t *testing.T) {
-		engine := NewStandardStreamEngine()
-
-		// 创建拓扑和处理器
-		topology, err := engine.CreateTopology("throughput-topology", "Throughput Topology", "Topology for throughput testing")
-		if err != nil {
-			t.Fatalf("Failed to create topology: %v", err)
-		}
-
-		var processedCount int64
-		processor := NewTestProcessor("throughput-processor", "Throughput Processor")
-		processor.SetProcessFunc(func(ff *flowfile.FlowFile) (*flowfile.FlowFile, error) {
-			atomic.AddInt64(&processedCount, 1)
-			return ff, nil
-		})
-
-		err = engine.AddProcessor(topology.ID, processor)
-		if err != nil {
-			t.Fatalf("Failed to add processor: %v", err)
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		// 启动拓扑
-		err = engine.StartTopology(ctx, topology.ID)
-		if err != nil {
-			t.Fatalf("Failed to start topology: %v", err)
-		}
-
-		// 等待拓扑启动
-		time.Sleep(100 * time.Millisecond)
-
-		numItems := 10000
+	for i := 0; i < 100; i++ {
 		start := time.Now()
+		ff := flowfile.NewFlowFile()
+		ff.SetAttribute("latency_test", string(rune(i)))
+		stream.Process(ff)
+		// 简单等待处理完成的近似方法
+		time.Sleep(1 * time.Millisecond)
+		latencies[i] = time.Since(start)
+	}
 
-		for i := 0; i < numItems; i++ {
-			message := &Message{
-				ID:        fmt.Sprintf("msg-%d", i),
-				Data:      fmt.Sprintf("throughput content %d", i),
-				Timestamp: time.Now(),
-			}
-			// 直接调用处理器处理消息
-			_, err := processor.Process(context.Background(), message)
-			if err != nil {
-				t.Errorf("Failed to process message: %v", err)
-			}
-		}
+	// 计算平均延迟
+	var totalLatency time.Duration
+	for _, latency := range latencies {
+		totalLatency += latency
+	}
+	avgLatency := totalLatency / time.Duration(len(latencies))
 
-		// 等待处理完成
-		time.Sleep(100 * time.Millisecond)
-
-		duration := time.Since(start)
-		throughput := float64(atomic.LoadInt64(&processedCount)) / duration.Seconds()
-
-		// 应该能够处理至少5000 items/sec
-		if throughput < 5000 {
-			t.Errorf("Throughput: %.0f items/sec, expected >= 5000 items/sec", throughput)
-		}
-
-		// 停止拓扑
-		stopCtx, stopCancel := context.WithTimeout(context.Background(), 1*time.Second)
-		defer stopCancel()
-		engine.StopTopology(stopCtx, topology.ID)
-	})
-
-	// 测试延迟
-	t.Run("LatencyTest", func(t *testing.T) {
-		latencies := make([]time.Duration, 100)
-
-		for i := 0; i < 100; i++ {
-			start := time.Now()
-			ff := flowfile.NewFlowFile()
-			ff.SetAttribute("latency_test", string(rune(i)))
-			stream.Process(ff)
-			// 简单等待处理完成的近似方法
-			time.Sleep(1 * time.Millisecond)
-			latencies[i] = time.Since(start)
-		}
-
-		// 计算平均延迟
-		var totalLatency time.Duration
-		for _, latency := range latencies {
-			totalLatency += latency
-		}
-		avgLatency := totalLatency / time.Duration(len(latencies))
-
-		// 平均延迟应该小于10ms
-		if avgLatency > 10*time.Millisecond {
-			t.Errorf("Average latency: %v, expected < 10ms", avgLatency)
-		}
-	})
+	// 平均延迟应该小于10ms
+	if avgLatency > 10*time.Millisecond {
+		t.Errorf("Average latency: %v, expected < 10ms", avgLatency)
+	}
 }
 
 // TestStreamEngineMetrics 测试流引擎指标

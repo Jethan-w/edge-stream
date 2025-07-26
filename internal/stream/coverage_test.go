@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stream
 
 import (
@@ -47,18 +60,28 @@ func TestStreamMetrics(t *testing.T) {
 
 // TestFileSourceProcessor 测试文件源处理器
 func TestFileSourceProcessor(t *testing.T) {
+	processor, _ := setupFileSourceProcessor(t)
+	testFileSourceBasicProperties(t, processor)
+	testFileSourceErrorCases(t, processor)
+	testFileSourceStartStop(t, processor)
+}
+
+func setupFileSourceProcessor(t *testing.T) (*FileSourceProcessor, string) {
 	// 创建临时测试文件
 	tempDir := t.TempDir()
 	testFile := filepath.Join(tempDir, "test.txt")
 	testContent := "line1\nline2\nline3\n"
-	err := os.WriteFile(testFile, []byte(testContent), 0644)
+	err := os.WriteFile(testFile, []byte(testContent), 0600)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
 	// 创建文件源处理器
 	processor := NewFileSourceProcessor("file-source", "Test File Source", testFile)
+	return processor, testFile
+}
 
+func testFileSourceBasicProperties(t *testing.T, processor *FileSourceProcessor) {
 	// 测试基本属性
 	if processor.GetID() != "file-source" {
 		t.Errorf("Expected ID 'file-source', got '%s'", processor.GetID())
@@ -72,9 +95,11 @@ func TestFileSourceProcessor(t *testing.T) {
 	if processor.GetStatus() != StreamStatusStopped {
 		t.Errorf("Expected status %s, got %s", StreamStatusStopped, processor.GetStatus())
 	}
+}
 
+func testFileSourceErrorCases(t *testing.T, processor *FileSourceProcessor) {
 	// 测试Process方法（源处理器不应该处理输入消息）
-	_, err = processor.Process(context.Background(), &Message{})
+	_, err := processor.Process(context.Background(), &Message{})
 	if err == nil {
 		t.Error("Expected error when calling Process on source processor")
 	}
@@ -90,7 +115,9 @@ func TestFileSourceProcessor(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error when starting without output channels")
 	}
+}
 
+func testFileSourceStartStop(t *testing.T, processor *FileSourceProcessor) {
 	// 设置输出通道
 	outputChan := make(chan *Message, 10)
 	processor.SetOutput(outputChan)
@@ -99,7 +126,7 @@ func TestFileSourceProcessor(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	err = processor.Start(ctx)
+	err := processor.Start(ctx)
 	if err != nil {
 		t.Fatalf("Failed to start processor: %v", err)
 	}
@@ -114,6 +141,29 @@ func TestFileSourceProcessor(t *testing.T) {
 		t.Error("Expected error when starting already running processor")
 	}
 
+	// 收集和验证消息
+	testFileSourceMessages(t, outputChan)
+
+	// 测试停止
+	err = processor.Stop(ctx)
+	if err != nil {
+		t.Fatalf("Failed to stop processor: %v", err)
+	}
+
+	// 等待状态更新
+	time.Sleep(100 * time.Millisecond)
+	if processor.GetStatus() != StreamStatusStopped {
+		t.Errorf("Expected status %s after stop, got %s", StreamStatusStopped, processor.GetStatus())
+	}
+
+	// 测试停止非运行状态的处理器
+	err = processor.Stop(ctx)
+	if err == nil {
+		t.Error("Expected error when stopping non-running processor")
+	}
+}
+
+func testFileSourceMessages(t *testing.T, outputChan chan *Message) {
 	// 收集消息
 	var messages []*Message
 	timeout := time.After(1 * time.Second)
@@ -139,24 +189,6 @@ func TestFileSourceProcessor(t *testing.T) {
 		if msg.Headers["source"] != "file-source" {
 			t.Errorf("Expected source header 'file-source', got '%v'", msg.Headers["source"])
 		}
-	}
-
-	// 测试停止
-	err = processor.Stop(ctx)
-	if err != nil {
-		t.Fatalf("Failed to stop processor: %v", err)
-	}
-
-	// 等待状态更新
-	time.Sleep(100 * time.Millisecond)
-	if processor.GetStatus() != StreamStatusStopped {
-		t.Errorf("Expected status %s after stop, got %s", StreamStatusStopped, processor.GetStatus())
-	}
-
-	// 测试停止非运行状态的处理器
-	err = processor.Stop(ctx)
-	if err == nil {
-		t.Error("Expected error when stopping non-running processor")
 	}
 }
 
@@ -430,7 +462,9 @@ func TestStreamEngineProcessorManagement(t *testing.T) {
 	}
 
 	// 清理
-	engine.DeleteTopology(topology.ID)
+	if err := engine.DeleteTopology(topology.ID); err != nil {
+		t.Logf("Failed to delete topology: %v", err)
+	}
 }
 
 // TestStreamEngineConnectionManagement 测试连接管理功能
@@ -452,8 +486,12 @@ func TestStreamEngineConnectionManagement(t *testing.T) {
 	})
 
 	// 添加处理器
-	engine.AddProcessor(topology.ID, sourceProcessor)
-	engine.AddProcessor(topology.ID, targetProcessor)
+	if err := engine.AddProcessor(topology.ID, sourceProcessor); err != nil {
+		t.Fatalf("Failed to add source processor: %v", err)
+	}
+	if err := engine.AddProcessor(topology.ID, targetProcessor); err != nil {
+		t.Fatalf("Failed to add target processor: %v", err)
+	}
 
 	// 测试连接处理器
 	err = engine.ConnectProcessors(topology.ID, "source", "target", 10)
@@ -503,7 +541,9 @@ func TestStreamEngineConnectionManagement(t *testing.T) {
 	}
 
 	// 清理
-	engine.DeleteTopology(topology.ID)
+	if err := engine.DeleteTopology(topology.ID); err != nil {
+		t.Logf("Failed to delete topology: %v", err)
+	}
 }
 
 // TestStreamEngineStatus 测试拓扑状态
@@ -533,5 +573,7 @@ func TestStreamEngineStatus(t *testing.T) {
 	}
 
 	// 清理
-	engine.DeleteTopology(topology.ID)
+	if err := engine.DeleteTopology(topology.ID); err != nil {
+		t.Logf("Failed to delete topology: %v", err)
+	}
 }

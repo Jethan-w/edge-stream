@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package windowmanager
 
 import (
@@ -10,8 +23,8 @@ func TestTimeWindow(t *testing.T) {
 	window := NewTimeWindow(2 * time.Second)
 
 	// 检查初始状态
-	if window.GetWindowType() != TIME_WINDOW {
-		t.Errorf("Expected window type %v, got %v", TIME_WINDOW, window.GetWindowType())
+	if window.GetWindowType() != TimeWindowType {
+		t.Errorf("Expected window type %v, got %v", TimeWindowType, window.GetWindowType())
 	}
 
 	if window.IsReady() {
@@ -52,8 +65,8 @@ func TestCountWindow(t *testing.T) {
 	window := NewCountWindow(3)
 
 	// 检查初始状态
-	if window.GetWindowType() != COUNT_WINDOW {
-		t.Errorf("Expected window type %v, got %v", COUNT_WINDOW, window.GetWindowType())
+	if window.GetWindowType() != CountWindowType {
+		t.Errorf("Expected window type %v, got %v", CountWindowType, window.GetWindowType())
 	}
 
 	if window.IsReady() {
@@ -119,7 +132,7 @@ func TestSimpleWindowManager(t *testing.T) {
 		t.Errorf("Expected 1 ready window, got %d", len(readyWindows))
 	}
 
-	if readyWindows[0].GetWindowType() != COUNT_WINDOW {
+	if readyWindows[0].GetWindowType() != CountWindowType {
 		t.Errorf("Expected count window to be ready, got %v", readyWindows[0].GetWindowType())
 	}
 
@@ -129,7 +142,7 @@ func TestSimpleWindowManager(t *testing.T) {
 	readyWindows = manager.GetReadyWindows()
 	found := false
 	for _, window := range readyWindows {
-		if window.GetWindowType() == TIME_WINDOW {
+		if window.GetWindowType() == TimeWindowType {
 			found = true
 			break
 		}

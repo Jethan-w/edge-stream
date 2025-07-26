@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stream
 
 import (
@@ -38,7 +51,8 @@ func (w *StandardWindowProcessor) AddMessage(message *Message) error {
 	case WindowTypeTumbling:
 		return w.addToTumblingWindow(message)
 	case WindowTypeSliding:
-		return w.addToSlidingWindow(message)
+		w.addToSlidingWindow(message)
+		return nil
 	case WindowTypeSession:
 		return w.addToSessionWindow(message)
 	default:
@@ -80,7 +94,7 @@ func (w *StandardWindowProcessor) addToTumblingWindow(message *Message) error {
 }
 
 // addToSlidingWindow 添加消息到滑动窗口
-func (w *StandardWindowProcessor) addToSlidingWindow(message *Message) error {
+func (w *StandardWindowProcessor) addToSlidingWindow(message *Message) {
 	// 计算所有可能的窗口
 	slideInterval := w.config.Slide
 	if slideInterval == 0 {
@@ -122,8 +136,6 @@ func (w *StandardWindowProcessor) addToSlidingWindow(message *Message) error {
 			window.Messages = append(window.Messages, message)
 		}
 	}
-
-	return nil
 }
 
 // addToSessionWindow 添加消息到会话窗口
@@ -372,7 +384,7 @@ func (w *StandardWindowProcessor) aggregateAvg(window *Window, field string) (*A
 
 // aggregateMin 最小值聚合
 func (w *StandardWindowProcessor) aggregateMin(window *Window, field string) (*AggregationResult, error) {
-	min := math.Inf(1)
+	minValue := math.Inf(1)
 	count := int64(0)
 
 	for _, message := range window.Messages {
@@ -380,15 +392,15 @@ func (w *StandardWindowProcessor) aggregateMin(window *Window, field string) (*A
 		if err != nil {
 			continue
 		}
-		if value < min {
-			min = value
+		if value < minValue {
+			minValue = value
 		}
 		count++
 	}
 
 	var result interface{}
 	if count > 0 {
-		result = min
+		result = minValue
 	}
 
 	return &AggregationResult{
@@ -403,7 +415,7 @@ func (w *StandardWindowProcessor) aggregateMin(window *Window, field string) (*A
 
 // aggregateMax 最大值聚合
 func (w *StandardWindowProcessor) aggregateMax(window *Window, field string) (*AggregationResult, error) {
-	max := math.Inf(-1)
+	maxValue := math.Inf(-1)
 	count := int64(0)
 
 	for _, message := range window.Messages {
@@ -411,15 +423,15 @@ func (w *StandardWindowProcessor) aggregateMax(window *Window, field string) (*A
 		if err != nil {
 			continue
 		}
-		if value > max {
-			max = value
+		if value > maxValue {
+			maxValue = value
 		}
 		count++
 	}
 
 	var result interface{}
 	if count > 0 {
-		result = max
+		result = maxValue
 	}
 
 	return &AggregationResult{

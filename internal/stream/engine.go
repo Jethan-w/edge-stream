@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package stream
 
 import (
@@ -176,7 +189,8 @@ func (e *StandardStreamEngine) AddProcessor(topologyID string, processor StreamP
 	e.metrics.LastActivity = time.Now()
 
 	// 发送事件
-	e.sendEvent(StreamEventProcessorAdded, topologyID, processorID, fmt.Sprintf("Processor '%s' added to topology '%s'", processor.GetName(), topology.Name), nil)
+	message := fmt.Sprintf("Processor '%s' added to topology '%s'", processor.GetName(), topology.Name)
+	e.sendEvent(StreamEventProcessorAdded, topologyID, processorID, message, nil)
 
 	return nil
 }
@@ -199,7 +213,9 @@ func (e *StandardStreamEngine) RemoveProcessor(topologyID, processorID string) e
 	// 停止处理器
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	processor.Stop(ctx)
+	if err := processor.Stop(ctx); err != nil {
+		// 记录停止错误但继续删除
+	}
 
 	// 移除相关连接
 	newConnections := make([]StreamConnection, 0)
@@ -217,7 +233,8 @@ func (e *StandardStreamEngine) RemoveProcessor(topologyID, processorID string) e
 	e.metrics.LastActivity = time.Now()
 
 	// 发送事件
-	e.sendEvent(StreamEventProcessorRemoved, topologyID, processorID, fmt.Sprintf("Processor '%s' removed from topology '%s'", processor.GetName(), topology.Name), nil)
+	message := fmt.Sprintf("Processor '%s' removed from topology '%s'", processor.GetName(), topology.Name)
+	e.sendEvent(StreamEventProcessorRemoved, topologyID, processorID, message, nil)
 
 	return nil
 }
@@ -400,7 +417,8 @@ func (e *StandardStreamEngine) StopTopology(ctx context.Context, topologyID stri
 	for processorID, processor := range topology.Processors {
 		if err := processor.Stop(ctx); err != nil {
 			// 记录错误但继续停止其他处理器
-			e.sendEvent(StreamEventProcessorError, topologyID, processorID, fmt.Sprintf("Error stopping processor '%s': %v", processorID, err), err)
+			message := fmt.Sprintf("Error stopping processor '%s': %v", processorID, err)
+			e.sendEvent(StreamEventProcessorError, topologyID, processorID, message, err)
 		}
 	}
 
@@ -451,25 +469,25 @@ func (e *StandardStreamEngine) GetTopologyMetrics(topologyID string) (*TopologyM
 	}
 
 	// 返回指标副本
-	copy := *metrics
-	copy.ProcessorMetrics = make(map[string]*StreamMetrics)
+	metricsCopy := *metrics
+	metricsCopy.ProcessorMetrics = make(map[string]*StreamMetrics)
 	for id, pm := range metrics.ProcessorMetrics {
-		copy.ProcessorMetrics[id] = pm.GetMetrics()
+		metricsCopy.ProcessorMetrics[id] = pm.GetMetrics()
 	}
 
 	// 计算拓扑总计指标
 	var totalMessages, totalBytes, totalErrors int64
-	for _, pm := range copy.ProcessorMetrics {
+	for _, pm := range metricsCopy.ProcessorMetrics {
 		totalMessages += pm.MessagesIn + pm.MessagesOut
 		totalBytes += pm.BytesIn + pm.BytesOut
 		totalErrors += pm.ErrorCount
 	}
-	copy.TotalMessages = totalMessages
-	copy.TotalBytes = totalBytes
-	copy.TotalErrors = totalErrors
-	copy.Uptime = time.Since(copy.StartTime)
+	metricsCopy.TotalMessages = totalMessages
+	metricsCopy.TotalBytes = totalBytes
+	metricsCopy.TotalErrors = totalErrors
+	metricsCopy.Uptime = time.Since(metricsCopy.StartTime)
 
-	return &copy, nil
+	return &metricsCopy, nil
 }
 
 // GetEngineMetrics 获取引擎指标
@@ -486,12 +504,12 @@ func (e *StandardStreamEngine) GetEngineMetrics() (*EngineMetrics, error) {
 	}
 
 	// 返回指标副本
-	copy := *e.metrics
-	copy.TotalMessages = totalMessages
-	copy.TotalBytes = totalBytes
-	copy.TotalErrors = totalErrors
-	copy.Uptime = time.Since(e.metrics.StartTime)
-	copy.TopologyMetrics = make(map[string]*TopologyMetrics)
+	metricsCopy := *e.metrics
+	metricsCopy.TotalMessages = totalMessages
+	metricsCopy.TotalBytes = totalBytes
+	metricsCopy.TotalErrors = totalErrors
+	metricsCopy.Uptime = time.Since(e.metrics.StartTime)
+	metricsCopy.TopologyMetrics = make(map[string]*TopologyMetrics)
 
 	for id, tm := range e.metrics.TopologyMetrics {
 		tmCopy := *tm
@@ -499,10 +517,10 @@ func (e *StandardStreamEngine) GetEngineMetrics() (*EngineMetrics, error) {
 		for pid, pm := range tm.ProcessorMetrics {
 			tmCopy.ProcessorMetrics[pid] = pm.GetMetrics()
 		}
-		copy.TopologyMetrics[id] = &tmCopy
+		metricsCopy.TopologyMetrics[id] = &tmCopy
 	}
 
-	return &copy, nil
+	return &metricsCopy, nil
 }
 
 // GetEventChannel 获取事件通道
@@ -538,7 +556,9 @@ func (e *StandardStreamEngine) Close() error {
 	defer cancel()
 
 	for topologyID := range e.runningTasks {
-		e.StopTopology(ctx, topologyID)
+		if err := e.StopTopology(ctx, topologyID); err != nil {
+			// 记录停止错误但不中断关闭过程
+		}
 	}
 
 	// 关闭事件通道

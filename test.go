@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -53,7 +66,9 @@ func runCommand(name string, args ...string) error {
 
 func runCoverage() {
 	fmt.Println("运行覆盖率测试...")
-	err := runCommand("go", "test", "-cover", "-timeout", "10m", "./internal/config", "./internal/metrics", "./internal/state", "./internal/stream")
+	packages := []string{"./internal/config", "./internal/metrics", "./internal/state", "./internal/stream"}
+	args := append([]string{"test", "-cover", "-timeout", "10m"}, packages...)
+	err := runCommand("go", args...)
 	if err != nil {
 		fmt.Println("覆盖率测试失败!")
 		os.Exit(1)
@@ -65,19 +80,26 @@ func runBenchmark() {
 	fmt.Println("运行性能基准测试...")
 
 	// 切换到 internal/performance 目录
-	originalDir, _ := os.Getwd()
+	originalDir, err := os.Getwd()
+	if err != nil {
+		fmt.Printf("无法获取当前目录: %v\n", err)
+		os.Exit(1)
+	}
 	perfDir := filepath.Join(originalDir, "internal", "performance")
-	err := os.Chdir(perfDir)
+	err = os.Chdir(perfDir)
 	if err != nil {
 		fmt.Printf("无法切换到目录 %s: %v\n", perfDir, err)
 		os.Exit(1)
 	}
 
 	// 运行基准测试
-	err = runCommand("go", "test", "-bench=BenchmarkConfigManager|BenchmarkMetricsCollector|BenchmarkStateManager", "-benchmem", "-run=^$", "-timeout", "10m", "-v")
+	benchPattern := "BenchmarkConfigManager|BenchmarkMetricsCollector|BenchmarkStateManager"
+	err = runCommand("go", "test", "-bench="+benchPattern, "-benchmem", "-run=^$", "-timeout", "10m", "-v")
 
 	// 切换回原目录
-	os.Chdir(originalDir)
+	if chdirErr := os.Chdir(originalDir); chdirErr != nil {
+		fmt.Printf("无法切换回原目录: %v\n", chdirErr)
+	}
 
 	if err != nil {
 		fmt.Println("基准测试失败!")

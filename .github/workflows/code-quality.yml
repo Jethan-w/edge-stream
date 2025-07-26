@@ -23,8 +23,7 @@ jobs:
       uses: golangci/golangci-lint-action@v4
       with:
         version: latest
-        args: --timeout=5m --issues-exit-code=0
-      continue-on-error: true
+        args: --timeout=5m
     
     - name: Run go mod tidy check
       run: |
@@ -82,12 +81,10 @@ jobs:
       run: |
         go install golang.org/x/vuln/cmd/govulncheck@latest
         govulncheck ./...
-      continue-on-error: true
     
     - name: Run Nancy (OSS Index)
       run: |
         go list -json -deps ./... | docker run --rm -i sonatypecommunity/nancy:latest sleuth
-      continue-on-error: true
 
   complexity:
     name: Code Complexity
@@ -107,13 +104,11 @@ jobs:
     - name: Check cyclomatic complexity
       run: |
         gocyclo -over 25 .
-        if [ $? -eq 0 ]; then
-          echo "✅ All functions have acceptable cyclomatic complexity"
-        else
+        if [ $? -ne 0 ]; then
           echo "❌ Some functions have high cyclomatic complexity (>25)"
-          echo "Warning: High complexity detected but not failing the build"
+          exit 1
         fi
-      continue-on-error: true
+        echo "✅ All functions have acceptable cyclomatic complexity"
     
     - name: Install gocognit
       run: go install github.com/uudashr/gocognit/cmd/gocognit@latest
@@ -121,13 +116,11 @@ jobs:
     - name: Check cognitive complexity
       run: |
         gocognit -over 30 .
-        if [ $? -eq 0 ]; then
-          echo "✅ All functions have acceptable cognitive complexity"
-        else
+        if [ $? -ne 0 ]; then
           echo "❌ Some functions have high cognitive complexity (>30)"
-          echo "Warning: High complexity detected but not failing the build"
+          exit 1
         fi
-      continue-on-error: true
+        echo "✅ All functions have acceptable cognitive complexity"
 
   documentation:
     name: Documentation Check
@@ -149,20 +142,21 @@ jobs:
         if [ $missing_docs -gt 0 ]; then
           echo "❌ Found $missing_docs undocumented exported functions"
           go doc -all ./... 2>&1 | grep "undocumented exported"
-          echo "Warning: Missing documentation but not failing the build"
+          exit 1
         else
           echo "✅ All exported functions are documented"
         fi
-      continue-on-error: true
     
     - name: Generate and check Go documentation
       run: |
         go install golang.org/x/tools/cmd/godoc@latest
         timeout 10s godoc -http=:6060 &
         sleep 5
-        curl -f http://localhost:6060/pkg/github.com/edgestream/edge-stream/ > /dev/null || echo "Documentation generation failed but continuing"
+        if ! curl -f http://localhost:6060/pkg/github.com/edgestream/edge-stream/ > /dev/null; then
+          echo "❌ Documentation generation failed"
+          exit 1
+        fi
         echo "✅ Go documentation check completed"
-      continue-on-error: true
 
   license:
     name: License Check
@@ -178,8 +172,7 @@ jobs:
         if [ $missing_license -gt 0 ]; then
           echo "❌ Found $missing_license Go files without license headers:"
           find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \;
-          echo "Warning: Missing license headers but not failing the build"
+          exit 1
         else
           echo "✅ All Go files have license headers"
         fi
-      continue-on-error: true

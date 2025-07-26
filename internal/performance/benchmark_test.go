@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package performance
 
 import (
@@ -131,7 +144,10 @@ func BenchmarkStateManager(b *testing.B) {
 
 	b.Run("StateSet", func(b *testing.B) {
 		sm := state.NewStandardStateManager(state.DefaultStateConfig())
-		testState, _ := sm.CreateState("benchmark_state", state.StateTypeMemory)
+		testState, err := sm.CreateState("benchmark_state", state.StateTypeMemory)
+		if err != nil {
+			b.Fatalf("Failed to create state: %v", err)
+		}
 		b.ResetTimer()
 		b.ReportAllocs()
 
@@ -146,7 +162,10 @@ func BenchmarkStateManager(b *testing.B) {
 		testState, _ := sm.CreateState("benchmark_state", state.StateTypeMemory)
 		// 预设数据
 		for i := 0; i < 1000; i++ {
-			testState.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
+			err := testState.Set(fmt.Sprintf("get_key_%d", i), fmt.Sprintf("value_%d", i))
+			if err != nil {
+				b.Errorf("Failed to set state: %v", err)
+			}
 		}
 
 		b.ResetTimer()
@@ -164,7 +183,10 @@ func BenchmarkStateManager(b *testing.B) {
 
 	b.Run("StateParallel", func(b *testing.B) {
 		sm := state.NewStandardStateManager(state.DefaultStateConfig())
-		testState, _ := sm.CreateState("parallel_state", state.StateTypeMemory)
+		testState, err := sm.CreateState("parallel_state", state.StateTypeMemory)
+		if err != nil {
+			b.Fatalf("Failed to create state: %v", err)
+		}
 		b.ResetTimer()
 		b.ReportAllocs()
 
@@ -303,7 +325,10 @@ func BenchmarkSystemIntegration(b *testing.B) {
 			cm.Set(key, value)
 
 			// 2. 状态操作
-			testState.Set(key, value)
+			err := testState.Set(key, value)
+			if err != nil {
+				b.Errorf("Failed to set state: %v", err)
+			}
 
 			// 3. 指标记录
 			mc.RecordCounter("workflow_operations", 1.0, map[string]string{

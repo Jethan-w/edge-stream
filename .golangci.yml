@@ -9,8 +9,8 @@ run:
     - bin
     - test-results
   skip-files:
-    - ".*\.pb\.go$"
-    - ".*_generated\.go$"
+    - ".*\\.pb\\.go$"
+    - ".*_generated\\.go$"
 
 output:
   format: colored-line-number
@@ -20,6 +20,16 @@ output:
   sort-results: true
 
 linters-settings:
+  depguard:
+    rules:
+      main:
+        allow:
+          - $all
+          - $gostd
+        deny:
+          - pkg: "github.com/sirupsen/logrus"
+            desc: "logging is allowed only by logutils.Log"
+  
   dupl:
     threshold: 100
   
@@ -154,14 +164,14 @@ linters-settings:
         arguments: [10]
       - name: file-header
         arguments:
-          - "Copyright \\d{4} EdgeStream Team"
+          - "Copyright \\\\d{4} EdgeStream Team"
   
   rowserrcheck:
     packages:
       - github.com/jmoiron/sqlx
   
   testpackage:
-    skip-regexp: (export|internal)_test\.go
+    skip-regexp: (export|internal)_test\\.go
   
   unparam:
     check-exported: false
@@ -222,7 +232,7 @@ linters:
 
 issues:
   exclude-rules:
-    - path: _test\.go
+    - path: _test\\.go
       linters:
         - gomnd
         - funlen

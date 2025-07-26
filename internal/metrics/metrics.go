@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package metrics
 
 import (
@@ -108,6 +121,17 @@ type PrometheusMetric struct {
 	summaryVec   prometheus.SummaryVec
 }
 
+// registerMetricWithRegistry 通用的指标注册函数
+func registerMetricWithRegistry(registry *prometheus.Registry, collector prometheus.Collector) error {
+	if err := registry.Register(collector); err != nil {
+		if _, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			return nil // 已注册的指标不是错误
+		}
+		return err
+	}
+	return nil
+}
+
 // NewPrometheusMetric 创建Prometheus指标
 func NewPrometheusMetric(name string, metricType MetricType, labels map[string]string, registry *prometheus.Registry) *PrometheusMetric {
 	if labels == nil {
@@ -136,7 +160,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 				},
 				labelNames,
 			)
-			if err := registry.Register(&metric.counterVec); err != nil {
+			if err := registerMetricWithRegistry(registry, &metric.counterVec); err != nil {
 				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
 					if existingVec, ok := are.ExistingCollector.(*prometheus.CounterVec); ok {
 						metric.counterVec = *existingVec
@@ -150,7 +174,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 					Help: "Counter metric for " + name,
 				},
 			)
-			if err := registry.Register(metric.counter); err != nil {
+			if err := registerMetricWithRegistry(registry, metric.counter); err != nil {
 				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
 					if existingCounter, ok := are.ExistingCollector.(prometheus.Counter); ok {
 						metric.counter = existingCounter
@@ -171,7 +195,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 				},
 				labelNames,
 			)
-			if err := registry.Register(&metric.gaugeVec); err != nil {
+			if err := registerMetricWithRegistry(registry, &metric.gaugeVec); err != nil {
 				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
 					if existingVec, ok := are.ExistingCollector.(*prometheus.GaugeVec); ok {
 						metric.gaugeVec = *existingVec
@@ -185,7 +209,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 					Help: "Gauge metric for " + name,
 				},
 			)
-			if err := registry.Register(metric.gauge); err != nil {
+			if err := registerMetricWithRegistry(registry, metric.gauge); err != nil {
 				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
 					if existingGauge, ok := are.ExistingCollector.(prometheus.Gauge); ok {
 						metric.gauge = existingGauge
@@ -194,80 +218,90 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 			}
 		}
 	case Histogram:
-		if len(labels) > 0 {
-			labelNames := make([]string, 0, len(labels))
-			for k := range labels {
-				labelNames = append(labelNames, k)
-			}
-			metric.histogramVec = *prometheus.NewHistogramVec(
-				prometheus.HistogramOpts{
-					Name:    name,
-					Help:    "Histogram metric for " + name,
-					Buckets: prometheus.DefBuckets,
-				},
-				labelNames,
-			)
-			if err := registry.Register(&metric.histogramVec); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingVec, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok {
-						metric.histogramVec = *existingVec
-					}
-				}
-			}
-		} else {
-			metric.histogram = prometheus.NewHistogram(
-				prometheus.HistogramOpts{
-					Name:    name,
-					Help:    "Histogram metric for " + name,
-					Buckets: prometheus.DefBuckets,
-				},
-			)
-			if err := registry.Register(metric.histogram); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingHistogram, ok := are.ExistingCollector.(prometheus.Histogram); ok {
-						metric.histogram = existingHistogram
-					}
+		metric.createHistogramMetric(name, labels, registry)
+	case Summary:
+		metric.createSummaryMetric(name, labels, registry)
+	}
+
+	return metric
+}
+
+// createHistogramMetric 创建Histogram指标
+func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+	if len(labels) > 0 {
+		labelNames := make([]string, 0, len(labels))
+		for k := range labels {
+			labelNames = append(labelNames, k)
+		}
+		m.histogramVec = *prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    name,
+				Help:    "Histogram metric for " + name,
+				Buckets: prometheus.DefBuckets,
+			},
+			labelNames,
+		)
+		if err := registerMetricWithRegistry(registry, &m.histogramVec); err != nil {
+			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+				if existingVec, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok {
+					m.histogramVec = *existingVec
 				}
 			}
 		}
-	case Summary:
-		if len(labels) > 0 {
-			labelNames := make([]string, 0, len(labels))
-			for k := range labels {
-				labelNames = append(labelNames, k)
-			}
-			metric.summaryVec = *prometheus.NewSummaryVec(
-				prometheus.SummaryOpts{
-					Name: name,
-					Help: "Summary metric for " + name,
-				},
-				labelNames,
-			)
-			if err := registry.Register(&metric.summaryVec); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingVec, ok := are.ExistingCollector.(*prometheus.SummaryVec); ok {
-						metric.summaryVec = *existingVec
-					}
-				}
-			}
-		} else {
-			metric.summary = prometheus.NewSummary(
-				prometheus.SummaryOpts{
-					Name: name,
-					Help: "Summary metric for " + name,
-				},
-			)
-			if err := registry.Register(metric.summary); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingSummary, ok := are.ExistingCollector.(prometheus.Summary); ok {
-						metric.summary = existingSummary
-					}
+	} else {
+		m.histogram = prometheus.NewHistogram(
+			prometheus.HistogramOpts{
+				Name:    name,
+				Help:    "Histogram metric for " + name,
+				Buckets: prometheus.DefBuckets,
+			},
+		)
+		if err := registerMetricWithRegistry(registry, m.histogram); err != nil {
+			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+				if existingHistogram, ok := are.ExistingCollector.(prometheus.Histogram); ok {
+					m.histogram = existingHistogram
 				}
 			}
 		}
 	}
+}
 
-	return metric
+// createSummaryMetric 创建Summary指标
+func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+	if len(labels) > 0 {
+		labelNames := make([]string, 0, len(labels))
+		for k := range labels {
+			labelNames = append(labelNames, k)
+		}
+		m.summaryVec = *prometheus.NewSummaryVec(
+			prometheus.SummaryOpts{
+				Name: name,
+				Help: "Summary metric for " + name,
+			},
+			labelNames,
+		)
+		if err := registerMetricWithRegistry(registry, &m.summaryVec); err != nil {
+			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+				if existingVec, ok := are.ExistingCollector.(*prometheus.SummaryVec); ok {
+					m.summaryVec = *existingVec
+				}
+			}
+		}
+	} else {
+		m.summary = prometheus.NewSummary(
+			prometheus.SummaryOpts{
+				Name: name,
+				Help: "Summary metric for " + name,
+			},
+		)
+		if err := registerMetricWithRegistry(registry, m.summary); err != nil {
+			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+				if existingSummary, ok := are.ExistingCollector.(prometheus.Summary); ok {
+					m.summary = existingSummary
+				}
+			}
+		}
+	}
 }
 
 // GetName 获取指标名称
@@ -391,6 +425,9 @@ func (m *PrometheusMetric) AddValue(delta float64) {
 			}
 			m.gaugeVec.WithLabelValues(labelValues...).Add(delta)
 		}
+	case Histogram, Summary:
+		// Histogram和Summary不支持AddValue操作
+		// 这些类型应该使用ObserveValue方法
 	}
 }
 
@@ -421,5 +458,8 @@ func (m *PrometheusMetric) ObserveValue(value float64) {
 			}
 			m.summaryVec.WithLabelValues(labelValues...).Observe(value)
 		}
+	case Counter, Gauge:
+		// Counter和Gauge不支持ObserveValue操作
+		// 这些类型应该使用SetValue或AddValue方法
 	}
 }

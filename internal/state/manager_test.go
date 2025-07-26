@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
@@ -194,7 +207,9 @@ func TestStateManagerConcurrency(t *testing.T) {
 				defer wg.Done()
 				key := fmt.Sprintf("delete_key_%d", id)
 				if state, exists := sm.GetState(fmt.Sprintf("delete_state_%d", id)); exists {
-					state.Delete(key)
+					if err := state.Delete(key); err != nil {
+						t.Logf("Failed to delete key %s: %v", key, err)
+					}
 				}
 			}(i)
 		}
@@ -255,7 +270,10 @@ func TestCheckpointManager(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			processorID := fmt.Sprintf("processor_%d", i)
 			checkpointData := map[string]interface{}{"id": i}
-			manager.CreateCheckpoint(processorID, checkpointData)
+			err := manager.CreateCheckpoint(processorID, checkpointData)
+			if err != nil {
+				t.Errorf("CreateCheckpoint failed: %v", err)
+			}
 		}
 
 		checkpoints := manager.ListCheckpoints()
@@ -270,10 +288,13 @@ func TestCheckpointManager(t *testing.T) {
 		checkpointData := map[string]interface{}{"test": "data"}
 
 		// 创建检查点
-		manager.CreateCheckpoint(processorID, checkpointData)
+		err := manager.CreateCheckpoint(processorID, checkpointData)
+		if err != nil {
+			t.Errorf("CreateCheckpoint failed: %v", err)
+		}
 
 		// 验证检查点存在
-		_, err := manager.RestoreCheckpoint(processorID)
+		_, err = manager.RestoreCheckpoint(processorID)
 		if err != nil {
 			t.Error("Checkpoint should exist before deletion")
 		}

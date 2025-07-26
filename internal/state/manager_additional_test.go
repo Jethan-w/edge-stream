@@ -1,3 +1,16 @@
+// Copyright 2025 EdgeStream Team
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package state
 
 import (
@@ -186,7 +199,10 @@ func TestStateManagerDataTypes(t *testing.T) {
 // TestStateManagerAdvancedConcurrency 测试高级并发安全
 func TestStateManagerAdvancedConcurrency(t *testing.T) {
 	sm := NewStandardStateManager(nil)
-	state, _ := sm.CreateState("test_state", StateTypeMemory)
+	state, err := sm.CreateState("test_state", StateTypeMemory)
+	if err != nil {
+		t.Fatalf("Failed to create state: %v", err)
+	}
 
 	// 测试并发读写
 	t.Run("ConcurrentReadWrite", func(t *testing.T) {
@@ -272,7 +288,9 @@ func TestStateManagerAdvancedConcurrency(t *testing.T) {
 		// 首先设置所有键
 		for i := 0; i < numKeys; i++ {
 			key := fmt.Sprintf("delete.test.%d", i)
-			state.Set(key, fmt.Sprintf("value-%d", i))
+			if err := state.Set(key, fmt.Sprintf("value-%d", i)); err != nil {
+				t.Logf("Failed to set key %s: %v", key, err)
+			}
 		}
 
 		// 并发删除
@@ -285,7 +303,9 @@ func TestStateManagerAdvancedConcurrency(t *testing.T) {
 				for i := start; i < end; i++ {
 					key := fmt.Sprintf("delete.test.%d", i)
 					// 删除可能失败（如果其他goroutine已删除）
-					_ = state.Delete(key)
+					if err := state.Delete(key); err != nil {
+						t.Logf("Failed to delete key %s: %v", key, err)
+					}
 				}
 			}(g)
 		}
@@ -311,7 +331,10 @@ func TestStateManagerAdvancedConcurrency(t *testing.T) {
 // TestStateManagerPerformanceOptimized 优化的性能测试
 func TestStateManagerPerformanceOptimized(t *testing.T) {
 	sm := NewStandardStateManager(nil)
-	state, _ := sm.CreateState("test_state", StateTypeMemory)
+	state, err := sm.CreateState("test_state", StateTypeMemory)
+	if err != nil {
+		t.Fatalf("Failed to create state: %v", err)
+	}
 
 	// 测试批量操作性能
 	t.Run("BatchOperationPerformance", func(t *testing.T) {
@@ -376,7 +399,9 @@ func TestStateManagerPerformanceOptimized(t *testing.T) {
 				for j := 0; j < numOpsPerGoroutine; j++ {
 					key := fmt.Sprintf("concurrent.perf.%d.%d", id, j)
 					value := fmt.Sprintf("concurrent-value-%d-%d", id, j)
-					state.Set(key, value)
+					if err := state.Set(key, value); err != nil {
+						t.Errorf("Failed to set key %s: %v", key, err)
+					}
 				}
 			}(i)
 		}
@@ -456,7 +481,9 @@ func TestStateManagerErrorRecovery(t *testing.T) {
 		// 删除一半数据
 		for i := 0; i < 500; i++ {
 			key := fmt.Sprintf("cleanup.%d", i)
-			state.Delete(key)
+			if err := state.Delete(key); err != nil {
+				t.Errorf("Failed to delete key %s: %v", key, err)
+			}
 		}
 
 		// 验证删除的数据不存在
@@ -486,13 +513,19 @@ func TestStateManagerLifecycle(t *testing.T) {
 		states := make([]State, 10)
 		for i := 0; i < 10; i++ {
 			managers[i] = NewStandardStateManager(nil)
-			states[i], _ = managers[i].CreateState(fmt.Sprintf("test_state_%d", i), StateTypeMemory)
+			var err error
+			states[i], err = managers[i].CreateState(fmt.Sprintf("test_state_%d", i), StateTypeMemory)
+			if err != nil {
+				t.Fatalf("Failed to create state %d: %v", i, err)
+			}
 
 			// 在每个实例中设置一些数据
 			for j := 0; j < 100; j++ {
 				key := fmt.Sprintf("lifecycle.%d.%d", i, j)
 				value := fmt.Sprintf("value-%d-%d", i, j)
-				states[i].Set(key, value)
+				if err := states[i].Set(key, value); err != nil {
+					t.Errorf("Failed to set key %s: %v", key, err)
+				}
 			}
 		}
 
@@ -558,7 +591,9 @@ func TestStateManagerStressTest(t *testing.T) {
 
 					// 偶尔删除
 					if j%10 == 0 {
-						state.Delete(key)
+						if err := state.Delete(key); err != nil {
+							t.Errorf("Failed to delete key %s: %v", key, err)
+						}
 					}
 				}
 			}(i)
