@@ -79,10 +79,10 @@ jobs:
     - name: Run go vet
       run: go vet ./...
     
-    - name: Run staticcheck
-      uses: dominikh/staticcheck-action@v1.3.1
-      with:
-        version: "2024.1.1"
+    - name: Install and run staticcheck
+      run: |
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        staticcheck ./...
 
   build:
     name: Build
