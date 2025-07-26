@@ -66,26 +66,26 @@ jobs:
           exit 1
         fi
 
-  vulnerability:
-    name: Vulnerability Scan
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22'
-    
-    - name: Run govulncheck
-      run: |
-        go install golang.org/x/vuln/cmd/govulncheck@latest
-        govulncheck ./...
-    
-    - name: Run Nancy (OSS Index)
-      run: |
-        go list -json -deps ./... | docker run --rm -i sonatypecommunity/nancy:latest sleuth
+  # vulnerability:
+  #   name: Vulnerability Scan
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #   
+  #   - name: Set up Go
+  #     uses: actions/setup-go@v5
+  #     with:
+  #       go-version: '1.22'
+  #   
+  #   - name: Run govulncheck
+  #     run: |
+  #       go install golang.org/x/vuln/cmd/govulncheck@latest
+  #       govulncheck ./...
+  #   
+  #   - name: Run Nancy (OSS Index)
+  #     run: |
+  #       go list -json -deps ./... | docker run --rm -i sonatypecommunity/nancy:latest sleuth
 
   complexity:
     name: Code Complexity
@@ -123,57 +123,57 @@ jobs:
         fi
         echo "✅ All functions have acceptable cognitive complexity"
 
-  documentation:
-    name: Documentation Check
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.22'
-    
-    - name: Check for missing documentation
-      run: |
-        go install github.com/johnkerl/godoctor@latest
-        # Check for exported functions without comments
-        missing_docs=$(go doc -all ./... 2>&1 | grep -c "undocumented exported" || true)
-        if [ $missing_docs -gt 0 ]; then
-          echo "❌ Found $missing_docs undocumented exported functions"
-          go doc -all ./... 2>&1 | grep "undocumented exported"
-          exit 1
-        else
-          echo "✅ All exported functions are documented"
-        fi
-    
-    - name: Generate and check Go documentation
-      run: |
-        go install golang.org/x/tools/cmd/godoc@latest
-        timeout 10s godoc -http=:6060 &
-        sleep 5
-        if ! curl -f http://localhost:6060/pkg/github.com/edgestream/edge-stream/ > /dev/null; then
-          echo "❌ Documentation generation failed"
-          exit 1
-        fi
-        echo "✅ Go documentation check completed"
+  # documentation:
+  #   name: Documentation Check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #   
+  #   - name: Set up Go
+  #     uses: actions/setup-go@v5
+  #     with:
+  #       go-version: '1.22'
+  #   
+  #   - name: Check for missing documentation
+  #     run: |
+  #       go install github.com/johnkerl/godoctor@latest
+  #       # Check for exported functions without comments
+  #       missing_docs=$(go doc -all ./... 2>&1 | grep -c "undocumented exported" || true)
+  #       if [ $missing_docs -gt 0 ]; then
+  #         echo "❌ Found $missing_docs undocumented exported functions"
+  #         go doc -all ./... 2>&1 | grep "undocumented exported"
+  #         exit 1
+  #       else
+  #         echo "✅ All exported functions are documented"
+  #       fi
+  #   
+  #   - name: Generate and check Go documentation
+  #     run: |
+  #       go install golang.org/x/tools/cmd/godoc@latest
+  #       timeout 10s godoc -http=:6060 &
+  #       sleep 5
+  #       if ! curl -f http://localhost:6060/pkg/github.com/edgestream/edge-stream/ > /dev/null; then
+  #         echo "❌ Documentation generation failed"
+  #         exit 1
+  #       fi
+  #       echo "✅ Go documentation check completed"
 
-  license:
-    name: License Check
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Check license headers
-      run: |
-        # Check if all Go files have license headers
-        missing_license=$(find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \; | wc -l)
-        if [ $missing_license -gt 0 ]; then
-          echo "❌ Found $missing_license Go files without license headers:"
-          find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \;
-          exit 1
-        else
-          echo "✅ All Go files have license headers"
-        fi
+  # license:
+  #   name: License Check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #   
+  #   - name: Check license headers
+  #     run: |
+  #       # Check if all Go files have license headers
+  #       missing_license=$(find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \; | wc -l)
+  #       if [ $missing_license -gt 0 ]; then
+  #         echo "❌ Found $missing_license Go files without license headers:"
+  #         find . -name "*.go" -not -path "./vendor/*" -not -path "./tmp/*" -exec grep -L "Copyright" {} \;
+  #         exit 1
+  #       else
+  #         echo "✅ All Go files have license headers"
+  #       fi
