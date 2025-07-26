@@ -454,23 +454,23 @@ func TestPrometheusIntegration(t *testing.T) {
 	}
 
 	// 验证指标类型
-		for _, mf := range metricFamilies {
-			name := mf.GetName()
-			switch name {
-			case "prometheus_counter":
-				if mf.GetType() != io_prometheus_client.MetricType_COUNTER {
-					t.Errorf("Expected COUNTER type for %s", name)
-				}
-			case "prometheus_gauge":
-				if mf.GetType() != io_prometheus_client.MetricType_GAUGE {
-					t.Errorf("Expected GAUGE type for %s", name)
-				}
-			case "prometheus_histogram":
-				if mf.GetType() != io_prometheus_client.MetricType_HISTOGRAM {
-					t.Errorf("Expected HISTOGRAM type for %s", name)
-				}
+	for _, mf := range metricFamilies {
+		name := mf.GetName()
+		switch name {
+		case "prometheus_counter":
+			if mf.GetType() != io_prometheus_client.MetricType_COUNTER {
+				t.Errorf("Expected COUNTER type for %s", name)
+			}
+		case "prometheus_gauge":
+			if mf.GetType() != io_prometheus_client.MetricType_GAUGE {
+				t.Errorf("Expected GAUGE type for %s", name)
+			}
+		case "prometheus_histogram":
+			if mf.GetType() != io_prometheus_client.MetricType_HISTOGRAM {
+				t.Errorf("Expected HISTOGRAM type for %s", name)
 			}
 		}
+	}
 }
 
 // TestPerformanceStandards 测试性能标准

@@ -29,7 +29,7 @@ func NewStandardMetricCollector() *StandardMetricCollector {
 // RecordCounter 记录计数器指标
 func (c *StandardMetricCollector) RecordCounter(name string, value float64, labels map[string]string) {
 	metricKey := c.buildMetricKey(name, labels)
-	
+
 	c.mu.Lock()
 	metric, exists := c.metrics[metricKey]
 	if !exists {
@@ -37,14 +37,14 @@ func (c *StandardMetricCollector) RecordCounter(name string, value float64, labe
 		c.metrics[metricKey] = metric
 	}
 	c.mu.Unlock()
-	
+
 	metric.AddValue(value)
 }
 
 // RecordGauge 记录仪表盘指标
 func (c *StandardMetricCollector) RecordGauge(name string, value float64, labels map[string]string) {
 	metricKey := c.buildMetricKey(name, labels)
-	
+
 	c.mu.Lock()
 	metric, exists := c.metrics[metricKey]
 	if !exists {
@@ -52,14 +52,14 @@ func (c *StandardMetricCollector) RecordGauge(name string, value float64, labels
 		c.metrics[metricKey] = metric
 	}
 	c.mu.Unlock()
-	
+
 	metric.SetValue(value)
 }
 
 // RecordHistogram 记录直方图指标
 func (c *StandardMetricCollector) RecordHistogram(name string, value float64, labels map[string]string) {
 	metricKey := c.buildMetricKey(name, labels)
-	
+
 	c.mu.Lock()
 	metric, exists := c.metrics[metricKey]
 	if !exists {
@@ -67,7 +67,7 @@ func (c *StandardMetricCollector) RecordHistogram(name string, value float64, la
 		c.metrics[metricKey] = metric
 	}
 	c.mu.Unlock()
-	
+
 	metric.ObserveValue(value)
 }
 
@@ -77,7 +77,7 @@ func (c *StandardMetricCollector) RecordLatency(operation string, duration time.
 		labels = make(map[string]string)
 	}
 	labels["operation"] = operation
-	
+
 	latencySeconds := duration.Seconds()
 	c.RecordHistogram("latency_seconds", latencySeconds, labels)
 }
@@ -88,7 +88,7 @@ func (c *StandardMetricCollector) RecordThroughput(operation string, count int64
 		labels = make(map[string]string)
 	}
 	labels["operation"] = operation
-	
+
 	c.RecordCounter("throughput_total", float64(count), labels)
 }
 
@@ -99,7 +99,7 @@ func (c *StandardMetricCollector) RecordError(operation string, errorType string
 	}
 	labels["operation"] = operation
 	labels["error_type"] = errorType
-	
+
 	c.RecordCounter("errors_total", 1, labels)
 }
 
@@ -108,7 +108,7 @@ func (c *StandardMetricCollector) RecordMemoryUsage(component string, bytes int6
 	labels := map[string]string{
 		"component": component,
 	}
-	
+
 	c.RecordGauge("memory_usage_bytes", float64(bytes), labels)
 }
 
@@ -117,7 +117,7 @@ func (c *StandardMetricCollector) RecordQueueDepth(queueName string, depth int64
 	labels := map[string]string{
 		"queue": queueName,
 	}
-	
+
 	c.RecordGauge("queue_depth", float64(depth), labels)
 }
 
@@ -126,7 +126,7 @@ func (c *StandardMetricCollector) RecordConnectionCount(service string, count in
 	labels := map[string]string{
 		"service": service,
 	}
-	
+
 	c.RecordGauge("connection_count", float64(count), labels)
 }
 
@@ -134,7 +134,7 @@ func (c *StandardMetricCollector) RecordConnectionCount(service string, count in
 func (c *StandardMetricCollector) GetMetrics() []Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	result := make([]Metric, 0, len(c.metrics))
 	for _, metric := range c.metrics {
 		result = append(result, metric)
@@ -146,7 +146,7 @@ func (c *StandardMetricCollector) GetMetrics() []Metric {
 func (c *StandardMetricCollector) GetMetric(name string) Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	for _, metric := range c.metrics {
 		if metric.GetName() == name {
 			return metric
@@ -159,7 +159,7 @@ func (c *StandardMetricCollector) GetMetric(name string) Metric {
 func (c *StandardMetricCollector) Reset() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// 创建新的注册表和指标映射
 	c.registry = prometheus.NewRegistry()
 	c.metrics = make(map[string]*PrometheusMetric)
@@ -188,14 +188,14 @@ func (c *StandardMetricCollector) exportPrometheus() ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to gather metrics: %w", err)
 	}
-	
+
 	var buf bytes.Buffer
 	for _, mf := range metricFamilies {
 		if _, err := expfmt.MetricFamilyToText(&buf, mf); err != nil {
 			return nil, fmt.Errorf("failed to write metric family: %w", err)
 		}
 	}
-	
+
 	return buf.Bytes(), nil
 }
 
@@ -203,12 +203,12 @@ func (c *StandardMetricCollector) exportPrometheus() ([]byte, error) {
 func (c *StandardMetricCollector) exportJSON() ([]byte, error) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	snapshot := MetricSnapshot{
 		Timestamp: time.Now(),
 		Metrics:   make(map[string]interface{}),
 	}
-	
+
 	for key, metric := range c.metrics {
 		snapshot.Metrics[key] = map[string]interface{}{
 			"name":      metric.GetName(),
@@ -217,7 +217,7 @@ func (c *StandardMetricCollector) exportJSON() ([]byte, error) {
 			"timestamp": metric.GetTimestamp(),
 		}
 	}
-	
+
 	return json.Marshal(snapshot)
 }
 
@@ -250,12 +250,12 @@ func (c *StandardMetricCollector) GetMetricCount() int {
 func (c *StandardMetricCollector) GetMetricNames() []string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	names := make(map[string]bool)
 	for _, metric := range c.metrics {
 		names[metric.GetName()] = true
 	}
-	
+
 	result := make([]string, 0, len(names))
 	for name := range names {
 		result = append(result, name)
@@ -267,7 +267,7 @@ func (c *StandardMetricCollector) GetMetricNames() []string {
 func (c *StandardMetricCollector) GetMetricsByType(metricType MetricType) []Metric {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	var result []Metric
 	for _, metric := range c.metrics {
 		if metric.GetType() == metricType {

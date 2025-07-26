@@ -38,8 +38,6 @@ func main() {
 	fmt.Println("\n=== Prometheus格式导出 ===")
 	exportPrometheus(collector)
 
-
-
 	fmt.Println("\n=== 监控系统示例完成 ===")
 }
 
@@ -152,8 +150,6 @@ func exportPrometheus(collector metrics.MetricCollector) {
 	fmt.Printf("Prometheus格式指标 (前800字符):\n%s...\n",
 		truncateString(string(prometheusData), 800))
 }
-
-
 
 // truncateString 截断字符串
 func truncateString(s string, maxLen int) string {

@@ -85,7 +85,7 @@ func (cw *CountWindow) AddData(data interface{}) {
 	cw.mu.Lock()
 	defer cw.mu.Unlock()
 	cw.data = append(cw.data, data)
-	
+
 	// 如果超过最大数量，移除最旧的数据
 	if len(cw.data) > cw.maxCount && cw.maxCount > 0 {
 		startIndex := len(cw.data) - cw.maxCount

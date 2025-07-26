@@ -98,14 +98,14 @@ type PrometheusMetric struct {
 	mu         sync.RWMutex
 
 	// Prometheus指标
-	counter   prometheus.Counter
-	counterVec prometheus.CounterVec
-	gauge     prometheus.Gauge
-	gaugeVec  prometheus.GaugeVec
-	histogram prometheus.Histogram
+	counter      prometheus.Counter
+	counterVec   prometheus.CounterVec
+	gauge        prometheus.Gauge
+	gaugeVec     prometheus.GaugeVec
+	histogram    prometheus.Histogram
 	histogramVec prometheus.HistogramVec
-	summary   prometheus.Summary
-	summaryVec prometheus.SummaryVec
+	summary      prometheus.Summary
+	summaryVec   prometheus.SummaryVec
 }
 
 // NewPrometheusMetric 创建Prometheus指标
@@ -288,7 +288,7 @@ func (m *PrometheusMetric) GetType() MetricType {
 func (m *PrometheusMetric) GetValue() float64 {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// 对于Prometheus指标，我们返回0作为占位符
 	// 实际值需要通过Prometheus的Gather方法获取
 	return 0.0
@@ -317,7 +317,7 @@ func (m *PrometheusMetric) GetTimestamp() time.Time {
 func (m *PrometheusMetric) GetPrometheusMetric() prometheus.Collector {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	switch m.metricType {
 	case Counter:
 		if m.counter != nil {

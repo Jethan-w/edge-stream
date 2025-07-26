@@ -24,7 +24,7 @@ func main() {
 	go func() {
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
-		
+
 		fmt.Println("📊 Prometheus metrics server started at http://localhost:8080/metrics")
 		if err := http.ListenAndServe(":8080", mux); err != nil {
 			log.Printf("HTTP server error: %v", err)
@@ -111,20 +111,20 @@ func main() {
 		select {
 		case <-ticker.C:
 			counter++
-			
+
 			// 更新指标
 			collector.RecordCounter("demo_operations_total", 1.0, map[string]string{
 				"operation": "update",
 			})
 			collector.RecordGauge("demo_active_tasks", float64(counter*3), nil)
 			collector.RecordHistogram("demo_task_duration_seconds", float64(counter)*0.1, nil)
-			
+
 			fmt.Printf("📊 Updated metrics (iteration %d)\n", counter)
-			
+
 			if counter >= 15 {
 				fmt.Println("\n🎉 Demo completed successfully!")
 				fmt.Println("\n📊 Final metrics export:")
-				
+
 				// 最终导出
 				finalExport, err := collector.Export("prometheus")
 				if err != nil {
@@ -132,7 +132,7 @@ func main() {
 				} else {
 					fmt.Printf("   Exported %d bytes of metrics data\n", len(finalExport))
 				}
-				
+
 				return
 			}
 		case <-time.After(35 * time.Second):
