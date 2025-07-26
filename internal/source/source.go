@@ -2,6 +2,7 @@ package source
 
 import (
 	"fmt"
+
 	"github.com/crazy/edge-stream/internal/flowfile"
 )
 

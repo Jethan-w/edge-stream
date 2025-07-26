@@ -3,9 +3,10 @@ package stream
 import (
 	"context"
 	"fmt"
-	"github.com/crazy/edge-stream/internal/flowfile"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
 // TestProcessor 测试处理器
