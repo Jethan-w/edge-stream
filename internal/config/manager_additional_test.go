@@ -322,10 +322,12 @@ func TestConfigManagerFileOperations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tempFile.Name())
-		tempFile.Close()
+		defer func() {
+			_ = os.Remove(tempFile.Name())
+		}()
+		_ = tempFile.Close()
 
-		cm.Set("test.key", "test.value")
+		_ = cm.Set("test.key", "test.value")
 		err = cm.Save(tempFile.Name())
 		if err != nil {
 			t.Errorf("Save() error = %v", err)
@@ -343,7 +345,9 @@ func TestConfigManagerFileOperations(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tempFile.Name())
+		defer func() {
+			_ = os.Remove(tempFile.Name())
+		}()
 
 		configContent := `
 test:
@@ -370,7 +374,9 @@ test:
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tempFile.Name())
+		defer func() {
+			_ = os.Remove(tempFile.Name())
+		}()
 
 		// 写入无效的YAML内容
 		invalidContent := `

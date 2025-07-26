@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -74,9 +75,11 @@ func (m *StandardConfigManager) LoadConfig(source string) error {
 
 // loadYAMLFile 加载YAML配置文件
 func (m *StandardConfigManager) loadYAMLFile(filename string) error {
-	data, err := os.ReadFile(filename)
+	// 清理文件路径以防止路径遍历攻击
+	cleanPath := filepath.Clean(filename)
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
-		return fmt.Errorf("failed to read config file %s: %w", filename, err)
+		return fmt.Errorf("failed to read config file %s: %w", cleanPath, err)
 	}
 
 	var config map[string]interface{}
@@ -103,9 +106,11 @@ func (m *StandardConfigManager) loadYAMLFile(filename string) error {
 
 // loadJSONFile 加载JSON配置文件
 func (m *StandardConfigManager) loadJSONFile(filename string) error {
-	data, err := os.ReadFile(filename)
+	// 清理文件路径以防止路径遍历攻击
+	cleanPath := filepath.Clean(filename)
+	data, err := os.ReadFile(cleanPath)
 	if err != nil {
-		return fmt.Errorf("failed to read config file %s: %w", filename, err)
+		return fmt.Errorf("failed to read config file %s: %w", cleanPath, err)
 	}
 
 	var config map[string]interface{}

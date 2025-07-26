@@ -98,29 +98,29 @@ type Config struct {
 	Database DatabaseConfig `yaml:"database" json:"database"`
 
 	// Redis Redis配置
-	Redis RedisConfig `yaml:"redis" json:"redis"`
+	Redis redisConfig `yaml:"redis" json:"redis"`
 
 	// Server 服务器配置
-	Server ServerConfig `yaml:"server" json:"server"`
+	Server serverConfig `yaml:"server" json:"server"`
 
 	// Logging 日志配置
-	Logging LoggingConfig `yaml:"logging" json:"logging"`
+	Logging loggingConfig `yaml:"logging" json:"logging"`
 
 	// Metrics 指标配置
-	Metrics MetricsConfig `yaml:"metrics" json:"metrics"`
+	Metrics metricsConfig `yaml:"metrics" json:"metrics"`
 
 	// Security 安全配置
-	Security SecurityConfig `yaml:"security" json:"security"`
+	Security securityConfig `yaml:"security" json:"security"`
 }
 
 // DatabaseConfig 数据库配置
 type DatabaseConfig struct {
-	MySQL      MySQLConfig      `yaml:"mysql" json:"mysql"`
-	PostgreSQL PostgreSQLConfig `yaml:"postgresql" json:"postgresql"`
+	MySQL      mysqlConfig      `yaml:"mysql" json:"mysql"`
+	PostgreSQL postgreSQLConfig `yaml:"postgresql" json:"postgresql"`
 }
 
-// MySQLConfig MySQL配置
-type MySQLConfig struct {
+// mysqlConfig MySQL配置
+type mysqlConfig struct {
 	Host     string        `yaml:"host" json:"host"`
 	Port     int           `yaml:"port" json:"port"`
 	Username string        `yaml:"username" json:"username"`
@@ -130,8 +130,8 @@ type MySQLConfig struct {
 	Timeout  time.Duration `yaml:"timeout" json:"timeout"`
 }
 
-// PostgreSQLConfig PostgreSQL配置
-type PostgreSQLConfig struct {
+// postgreSQLConfig PostgreSQL配置
+type postgreSQLConfig struct {
 	Host     string        `yaml:"host" json:"host"`
 	Port     int           `yaml:"port" json:"port"`
 	Username string        `yaml:"username" json:"username"`
@@ -141,8 +141,8 @@ type PostgreSQLConfig struct {
 	Timeout  time.Duration `yaml:"timeout" json:"timeout"`
 }
 
-// RedisConfig Redis配置
-type RedisConfig struct {
+// redisConfig Redis配置
+type redisConfig struct {
 	Host     string        `yaml:"host" json:"host"`
 	Port     int           `yaml:"port" json:"port"`
 	Password string        `yaml:"password" json:"password" sensitive:"true"`
@@ -150,8 +150,8 @@ type RedisConfig struct {
 	Timeout  time.Duration `yaml:"timeout" json:"timeout"`
 }
 
-// ServerConfig 服务器配置
-type ServerConfig struct {
+// serverConfig 服务器配置
+type serverConfig struct {
 	Host         string        `yaml:"host" json:"host"`
 	Port         int           `yaml:"port" json:"port"`
 	ReadTimeout  time.Duration `yaml:"read_timeout" json:"read_timeout"`
@@ -159,22 +159,22 @@ type ServerConfig struct {
 	IdleTimeout  time.Duration `yaml:"idle_timeout" json:"idle_timeout"`
 }
 
-// LoggingConfig 日志配置
-type LoggingConfig struct {
+// loggingConfig 日志配置
+type loggingConfig struct {
 	Level  string `yaml:"level" json:"level"`
 	Format string `yaml:"format" json:"format"`
 	Output string `yaml:"output" json:"output"`
 }
 
-// MetricsConfig 指标配置
-type MetricsConfig struct {
+// metricsConfig 指标配置
+type metricsConfig struct {
 	Enabled  bool          `yaml:"enabled" json:"enabled"`
 	Endpoint string        `yaml:"endpoint" json:"endpoint"`
 	Interval time.Duration `yaml:"interval" json:"interval"`
 }
 
-// SecurityConfig 安全配置
-type SecurityConfig struct {
+// securityConfig 安全配置
+type securityConfig struct {
 	EncryptionKey string `yaml:"encryption_key" json:"encryption_key" sensitive:"true"`
 	JWTSecret     string `yaml:"jwt_secret" json:"jwt_secret" sensitive:"true"`
 	TLSEnabled    bool   `yaml:"tls_enabled" json:"tls_enabled"`
@@ -186,43 +186,43 @@ type SecurityConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Database: DatabaseConfig{
-			MySQL: MySQLConfig{
+			MySQL: mysqlConfig{
 				Host:    "localhost",
 				Port:    constants.DefaultMySQLPort,
 				Charset: "utf8mb4",
 				Timeout: constants.DefaultConnectionTimeoutSeconds * time.Second,
 			},
-			PostgreSQL: PostgreSQLConfig{
+			PostgreSQL: postgreSQLConfig{
 				Host:    "localhost",
 				Port:    constants.DefaultPostgreSQLPort,
 				SSLMode: "disable",
 				Timeout: constants.DefaultConnectionTimeoutSeconds * time.Second,
 			},
 		},
-		Redis: RedisConfig{
+		Redis: redisConfig{
 			Host:    "localhost",
 			Port:    constants.DefaultRedisPort,
 			DB:      constants.DefaultRedisDB,
 			Timeout: constants.DefaultRedisTimeoutSeconds * time.Second,
 		},
-		Server: ServerConfig{
+		Server: serverConfig{
 			Host:         "localhost",
 			Port:         constants.DefaultHTTPPort,
 			ReadTimeout:  constants.DefaultServerReadTimeoutSeconds * time.Second,
 			WriteTimeout: constants.DefaultServerWriteTimeoutSeconds * time.Second,
 			IdleTimeout:  constants.DefaultServerIdleTimeoutSeconds * time.Second,
 		},
-		Logging: LoggingConfig{
+		Logging: loggingConfig{
 			Level:  "info",
 			Format: "json",
 			Output: "stdout",
 		},
-		Metrics: MetricsConfig{
+		Metrics: metricsConfig{
 			Enabled:  true,
 			Endpoint: "/metrics",
 			Interval: constants.DefaultMetricsIntervalSeconds * time.Second,
 		},
-		Security: SecurityConfig{
+		Security: securityConfig{
 			TLSEnabled: false,
 		},
 	}
