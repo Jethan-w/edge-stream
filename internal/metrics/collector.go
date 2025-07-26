@@ -94,6 +94,37 @@ func (c *StandardMetricCollector) RecordHistogram(name string, value float64, la
 
 	// 简化的直方图实现，使用预定义的桶
 	buckets := []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10}
+
+	// 使用单一锁保护整个操作
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// 检查缓存中是否存在
+	if cached, exists := c.cache[metricName]; exists {
+		// 对于直方图，我们需要更新现有数据
+		if existingData, ok := cached.GetValue().(*HistogramData); ok {
+			// 创建新的数据副本以避免并发修改
+			newData := &HistogramData{
+				Buckets: make([]HistogramBucket, len(existingData.Buckets)),
+				Count:   existingData.Count + 1,
+				Sum:     existingData.Sum + value,
+			}
+			// 复制并更新桶数据
+			for i, bucket := range existingData.Buckets {
+				newData.Buckets[i] = HistogramBucket{
+					UpperBound: bucket.UpperBound,
+					Count:      bucket.Count,
+				}
+				if value <= bucket.UpperBound {
+					newData.Buckets[i].Count++
+				}
+			}
+			cached.SetValue(newData)
+		}
+		return
+	}
+
+	// 创建新的直方图数据
 	histogramData := &HistogramData{
 		Buckets: make([]HistogramBucket, len(buckets)),
 		Count:   1,
@@ -110,50 +141,9 @@ func (c *StandardMetricCollector) RecordHistogram(name string, value float64, la
 		}
 	}
 
-	// 首先尝试从缓存中获取
-	c.cacheMu.RLock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.RUnlock()
-		// 对于直方图，我们需要更新现有数据
-		if existingData, ok := cached.GetValue().(*HistogramData); ok {
-			existingData.Count++
-			existingData.Sum += value
-			for i, bound := range buckets {
-				if value <= bound {
-					existingData.Buckets[i].Count++
-				}
-			}
-			cached.SetValue(existingData)
-		}
-		return
-	}
-	c.cacheMu.RUnlock()
-
-	// 缓存中不存在，需要创建新的指标
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// 双重检查，防止并发创建
-	c.cacheMu.Lock()
-	if cached, exists := c.cache[metricName]; exists {
-		c.cacheMu.Unlock()
-		if existingData, ok := cached.GetValue().(*HistogramData); ok {
-			existingData.Count++
-			existingData.Sum += value
-			for i, bound := range buckets {
-				if value <= bound {
-					existingData.Buckets[i].Count++
-				}
-			}
-			cached.SetValue(existingData)
-		}
-		return
-	}
-
 	metric := NewStandardMetric(metricName, Histogram, histogramData, labels)
 	c.registry.Register(metric)
 	c.cache[metricName] = metric
-	c.cacheMu.Unlock()
 }
 
 // RecordLatency 记录延迟指标
