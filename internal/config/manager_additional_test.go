@@ -558,9 +558,9 @@ func TestConfigManagerWatching(t *testing.T) {
 		}()
 
 		// 进行一些配置变更
-		cm.Set("watch.test1", "value1")
-		cm.Set("watch.test2", "value2")
-		cm.Set("watch.test3", "value3")
+		_ = cm.Set("watch.test1", "value1")
+		_ = cm.Set("watch.test2", "value2")
+		_ = cm.Set("watch.test3", "value3")
 
 		// 等待一段时间
 		time.Sleep(500 * time.Millisecond)

@@ -24,10 +24,10 @@ func TestStandardConfigManager(t *testing.T) {
 
 	// 测试基本的设置和获取
 	t.Run("BasicSetGet", func(t *testing.T) {
-		cm.Set("test.string", "hello")
-		cm.Set("test.int", 42)
-		cm.Set("test.bool", true)
-		cm.Set("test.duration", "30s")
+		_ = cm.Set("test.string", "hello")
+		_ = cm.Set("test.int", 42)
+		_ = cm.Set("test.bool", true)
+		_ = cm.Set("test.duration", "30s")
 
 		if got := cm.GetString("test.string"); got != "hello" {
 			t.Errorf("GetString() = %v, want %v", got, "hello")
@@ -68,7 +68,9 @@ func TestStandardConfigManager(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tempFile.Name())
+		defer func() {
+			_ = os.Remove(tempFile.Name())
+		}()
 
 		configContent := `
 test:
@@ -79,7 +81,7 @@ test:
 		if _, err := tempFile.WriteString(configContent); err != nil {
 			t.Fatal(err)
 		}
-		tempFile.Close()
+		_ = tempFile.Close()
 
 		if err := cm.LoadConfig(tempFile.Name()); err != nil {
 			t.Errorf("LoadConfig() error = %v", err)
@@ -99,7 +101,7 @@ func TestConfigManagerConcurrency(t *testing.T) {
 		done := make(chan bool)
 		go func() {
 			for i := 0; i < 100; i++ {
-				cm.Set("concurrent.test", i)
+				_ = cm.Set("concurrent.test", i)
 			}
 			done <- true
 		}()
@@ -123,7 +125,7 @@ func BenchmarkConfigManager(b *testing.B) {
 	b.Run("Set", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			cm.Set("benchmark.key", i)
+			_ = cm.Set("benchmark.key", i)
 		}
 	})
 
