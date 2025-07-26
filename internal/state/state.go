@@ -252,5 +252,19 @@ func (sm *StateMetrics) IncrementError() {
 func (sm *StateMetrics) GetMetrics() StateMetrics {
 	sm.mu.RLock()
 	defer sm.mu.RUnlock()
-	return *sm
+	
+	// 返回不包含锁的副本
+	return StateMetrics{
+		StateCount:         sm.StateCount,
+		TotalOperations:    sm.TotalOperations,
+		GetOperations:      sm.GetOperations,
+		SetOperations:      sm.SetOperations,
+		DeleteOperations:   sm.DeleteOperations,
+		AverageLatency:     sm.AverageLatency,
+		MaxLatency:         sm.MaxLatency,
+		MinLatency:         sm.MinLatency,
+		CheckpointCount:    sm.CheckpointCount,
+		LastCheckpointTime: sm.LastCheckpointTime,
+		ErrorCount:         sm.ErrorCount,
+	}
 }

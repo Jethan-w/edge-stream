@@ -291,7 +291,16 @@ func (sm *StandardStateManager) startCheckpointTimer() {
 func (sm *StandardStateManager) GetMetrics() StateManagerMetrics {
 	sm.metrics.mu.RLock()
 	defer sm.metrics.mu.RUnlock()
-	return *sm.metrics
+	
+	// 返回不包含锁的副本
+	return StateManagerMetrics{
+		StatesCount:      sm.metrics.StatesCount,
+		CheckpointsCount: sm.metrics.CheckpointsCount,
+		LastCheckpointAt: sm.metrics.LastCheckpointAt,
+		TotalOperations:  sm.metrics.TotalOperations,
+		ErrorsCount:      sm.metrics.ErrorsCount,
+		StartTime:        sm.metrics.StartTime,
+	}
 }
 
 // GetCheckpointManager 获取检查点管理器
