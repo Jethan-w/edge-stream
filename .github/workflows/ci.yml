@@ -68,7 +68,7 @@ jobs:
     
     - name: Run security scan with gosec
       run: |
-        go install github.com/securecodewarrior/gosec/cmd/gosec@latest
+       go install github.com/securego/gosec/v2/cmd/gosec@latest
         gosec -fmt json -out gosec-report.json -stdout ./...
     
     - name: Upload security scan results
