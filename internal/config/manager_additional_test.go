@@ -262,7 +262,7 @@ func TestConfigManagerAdvancedConcurrency(t *testing.T) {
 				defer wg.Done()
 				for j := 0; j < numOperations; j++ {
 					key := fmt.Sprintf("concurrent.read.%d", id)
-					cm.Set(key, "test-value")
+					_ = cm.Set(key, "test-value")
 					value := cm.GetString(key)
 					if value != "test-value" {
 						t.Errorf("Concurrent read failed: expected 'test-value', got '%s'", value)
