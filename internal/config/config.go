@@ -16,6 +16,8 @@ package config
 import (
 	"context"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // ConfigManager 配置管理器接口
@@ -28,6 +30,9 @@ type ConfigManager interface {
 
 	// GetInt 获取整数配置
 	GetInt(key string) int
+
+	// GetFloat64 获取浮点数配置
+	GetFloat64(key string) float64
 
 	// GetBool 获取布尔配置
 	GetBool(key string) bool
@@ -55,6 +60,9 @@ type ConfigManager interface {
 
 	// Decrypt 解密配置值
 	Decrypt(encryptedValue string) (string, error)
+
+	// Save 保存配置到文件
+	Save(filename string) error
 }
 
 // ConfigChangeCallback 配置变更回调函数
@@ -180,26 +188,26 @@ func DefaultConfig() *Config {
 		Database: DatabaseConfig{
 			MySQL: MySQLConfig{
 				Host:    "localhost",
-				Port:    3306,
+				Port:    constants.DefaultMySQLPort,
 				Charset: "utf8mb4",
-				Timeout: 30 * time.Second,
+				Timeout: constants.DefaultConnectionTimeoutSeconds * time.Second,
 			},
 			PostgreSQL: PostgreSQLConfig{
 				Host:    "localhost",
-				Port:    5432,
+				Port:    constants.DefaultPostgreSQLPort,
 				SSLMode: "disable",
-				Timeout: 30 * time.Second,
+				Timeout: constants.DefaultConnectionTimeoutSeconds * time.Second,
 			},
 		},
 		Redis: RedisConfig{
 			Host:    "localhost",
-			Port:    6379,
-			DB:      0,
-			Timeout: 5 * time.Second,
+			Port:    constants.DefaultRedisPort,
+			DB:      constants.DefaultRedisDB,
+			Timeout: constants.DefaultRedisTimeoutSeconds * time.Second,
 		},
 		Server: ServerConfig{
 			Host:         "localhost",
-			Port:         8080,
+			Port:         constants.DefaultHTTPPort,
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  60 * time.Second,

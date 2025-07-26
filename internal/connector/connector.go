@@ -19,6 +19,17 @@ import (
 	"time"
 )
 
+// 连接器配置常量
+const (
+	DefaultMaxRetries          = 3
+	DefaultRetryInterval       = 5 * time.Second
+	DefaultHealthCheckInterval = 30 * time.Second
+	DefaultMetricsInterval     = 10 * time.Second
+	DefaultBufferSize          = 1000
+	DefaultBatchSize           = 100
+	DefaultTimeout             = 30 * time.Second
+)
+
 // ConnectorType 连接器类型
 type ConnectorType string
 
@@ -252,13 +263,13 @@ type ConnectorConfig struct {
 // DefaultConnectorConfig 默认连接器配置
 func DefaultConnectorConfig() *ConnectorConfig {
 	return &ConnectorConfig{
-		MaxRetries:          3,
-		RetryInterval:       5 * time.Second,
-		HealthCheckInterval: 30 * time.Second,
-		MetricsInterval:     10 * time.Second,
-		BufferSize:          1000,
-		BatchSize:           100,
-		Timeout:             30 * time.Second,
+		MaxRetries:          DefaultMaxRetries,
+		RetryInterval:       DefaultRetryInterval,
+		HealthCheckInterval: DefaultHealthCheckInterval,
+		MetricsInterval:     DefaultMetricsInterval,
+		BufferSize:          DefaultBufferSize,
+		BatchSize:           DefaultBatchSize,
+		Timeout:             DefaultTimeout,
 	}
 }
 

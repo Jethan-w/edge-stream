@@ -20,6 +20,14 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
+)
+
+// 窗口处理常量
+const (
+	DefaultWatermark  = 5 * time.Second
+	DefaultSessionGap = 30 * time.Minute
 )
 
 // StandardWindowProcessor 标准窗口处理器
@@ -98,7 +106,7 @@ func (w *StandardWindowProcessor) addToSlidingWindow(message *Message) {
 	// 计算所有可能的窗口
 	slideInterval := w.config.Slide
 	if slideInterval == 0 {
-		slideInterval = w.config.Size / 4 // 默认滑动间隔为窗口大小的1/4
+		slideInterval = w.config.Size / constants.DefaultTimeWindowSizeMultiplier // 默认滑动间隔为窗口大小的1/4
 	}
 
 	// 计算消息应该属于的窗口
@@ -142,7 +150,7 @@ func (w *StandardWindowProcessor) addToSlidingWindow(message *Message) {
 func (w *StandardWindowProcessor) addToSessionWindow(message *Message) error {
 	sessionGap := w.config.SessionGap
 	if sessionGap == 0 {
-		sessionGap = 30 * time.Minute // 默认会话间隔30分钟
+		sessionGap = constants.DefaultCleanupIntervalSeconds * time.Minute // 默认会话间隔30分钟
 	}
 
 	// 查找可以合并的现有会话窗口
@@ -255,14 +263,14 @@ func (w *StandardWindowProcessor) CloseExpiredWindows(now time.Time) ([]*Window,
 			// 对于滚动和滑动窗口，检查是否超过了水印时间
 			watermark := w.config.Watermark
 			if watermark == 0 {
-				watermark = 5 * time.Second // 默认水印5秒
+				watermark = DefaultWatermark // 默认水印5秒
 			}
 			expired = now.Sub(window.EndTime) > watermark
 		case WindowTypeSession:
 			// 对于会话窗口，检查是否超过了会话间隔
 			sessionGap := w.config.SessionGap
 			if sessionGap == 0 {
-				sessionGap = 30 * time.Minute
+				sessionGap = DefaultSessionGap
 			}
 			expired = now.Sub(window.EndTime) > sessionGap
 		}

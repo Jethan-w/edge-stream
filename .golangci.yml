@@ -3,32 +3,40 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: true
-  skip-dirs:
-    - vendor
-    - tmp
-    - bin
-    - test-results
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*_generated\\.go$"
 
 output:
-  format: colored-line-number
+  formats:
+    - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   sort-results: true
 
 linters-settings:
   depguard:
     rules:
       main:
+        files:
+          - "!*_test.go"
         allow:
           - $all
           - $gostd
+          - github.com/crazy/edge-stream/internal/flowfile
+          - gopkg.in/yaml.v3
         deny:
           - pkg: "github.com/sirupsen/logrus"
             desc: "logging is allowed only by logutils.Log"
+      test:
+        files:
+          - "*_test.go"
+        allow:
+          - $all
+          - $gostd
+          - github.com/crazy/edge-stream/internal/config
+          - github.com/crazy/edge-stream/internal/metrics
+          - github.com/crazy/edge-stream/internal/state
+          - github.com/crazy/edge-stream/internal/stream
+          - github.com/crazy/edge-stream/internal/flowfile
+          - gopkg.in/yaml.v3
   
   dupl:
     threshold: 100
@@ -86,7 +94,7 @@ linters-settings:
   golint:
     min-confidence: 0
   
-  gomnd:
+  mnd:
     settings:
       mnd:
         checks:
@@ -95,7 +103,6 @@ linters-settings:
           - condition
           - operation
           - return
-        ignored-numbers: 0,1,2,3
         ignored-functions: strings.SplitN
   
   gomodguard:
@@ -114,7 +121,6 @@ linters-settings:
             reason: "`mod` is the official go.mod parser library."
   
   govet:
-    check-shadowing: true
     settings:
       printf:
         funcs:
@@ -164,7 +170,7 @@ linters-settings:
         arguments: [10]
       - name: file-header
         arguments:
-          - "Copyright \\\\d{4} EdgeStream Team"
+          - "Copyright \\d{4} EdgeStream Team"
   
   rowserrcheck:
     packages:
@@ -209,7 +215,7 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - gomnd
+    - mnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -231,10 +237,19 @@ linters:
     - revive
 
 issues:
+  exclude-dirs:
+    - vendor
+    - tmp
+    - bin
+    - test-results
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*_generated\\.go$"
+  uniq-by-line: true
   exclude-rules:
     - path: _test\\.go
       linters:
-        - gomnd
+        - mnd
         - funlen
         - gocyclo
         - errcheck
@@ -243,9 +258,13 @@ issues:
     
     - path: examples/
       linters:
-        - gomnd
+        - mnd
         - funlen
         - gocyclo
+    
+    - path: test\.go
+      linters:
+        - mnd
     
     - path: internal/
       text: "weak cryptographic primitive"
@@ -281,5 +300,5 @@ severity:
         - dupl
       severity: info
     - linters:
-        - gomnd
+        - mnd
       severity: info

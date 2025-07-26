@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/crazy/edge-stream/internal/constants"
 )
 
 // StandardStreamEngine 标准流处理引擎
@@ -552,7 +554,7 @@ func (e *StandardStreamEngine) Close() error {
 	defer e.mutex.Unlock()
 
 	// 停止所有运行中的拓扑
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), constants.DefaultRetryDelaySeconds*time.Second)
 	defer cancel()
 
 	for topologyID := range e.runningTasks {

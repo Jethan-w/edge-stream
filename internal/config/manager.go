@@ -188,58 +188,87 @@ func (m *StandardConfigManager) GetString(key string) string {
 	return ""
 }
 
+// convertToInt 将任意类型的值转换为int
+func convertToInt(value interface{}) int {
+	switch v := value.(type) {
+	case int:
+		return v
+	case int8:
+		return int(v)
+	case int16:
+		return int(v)
+	case int32:
+		return int(v)
+	case int64:
+		return convertInt64ToInt(v)
+	case uint:
+		return convertUintToInt(v)
+	case uint8:
+		return int(v)
+	case uint16:
+		return int(v)
+	case uint32:
+		return convertUint32ToInt(v)
+	case uint64:
+		return convertUint64ToInt(v)
+	case float32:
+		return int(v)
+	case float64:
+		return int(v)
+	case string:
+		return convertStringToInt(v)
+	default:
+		return 0
+	}
+}
+
+// convertInt64ToInt 安全地将int64转换为int
+func convertInt64ToInt(v int64) int {
+	if v > 2147483647 || v < -2147483648 {
+		return 0 // 溢出时返回0
+	}
+	return int(v)
+}
+
+// convertUintToInt 安全地将uint转换为int
+func convertUintToInt(v uint) int {
+	if v > 2147483647 {
+		return 0 // 溢出时返回0
+	}
+	return int(v)
+}
+
+// convertUint32ToInt 安全地将uint32转换为int
+func convertUint32ToInt(v uint32) int {
+	if v > 2147483647 {
+		return 0 // 溢出时返回0
+	}
+	return int(v)
+}
+
+// convertUint64ToInt 安全地将uint64转换为int
+func convertUint64ToInt(v uint64) int {
+	if v > 2147483647 {
+		return 0 // 溢出时返回0
+	}
+	return int(v)
+}
+
+// convertStringToInt 将字符串转换为int
+func convertStringToInt(v string) int {
+	if i, err := strconv.Atoi(v); err == nil {
+		return i
+	}
+	return 0
+}
+
 // GetInt 获取整数配置
 func (m *StandardConfigManager) GetInt(key string) int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	if value, exists := m.config[key]; exists {
-		switch v := value.(type) {
-		case int:
-			return v
-		case int8:
-			return int(v)
-		case int16:
-			return int(v)
-		case int32:
-			return int(v)
-		case int64:
-			// 检查int64到int的安全转换
-			if v > 2147483647 || v < -2147483648 {
-				return 0 // 溢出时返回0
-			}
-			return int(v)
-		case uint:
-			// 检查uint到int的安全转换
-			if v > 2147483647 {
-				return 0 // 溢出时返回0
-			}
-			return int(v)
-		case uint8:
-			return int(v)
-		case uint16:
-			return int(v)
-		case uint32:
-			// 检查uint32到int的安全转换
-			if v > 2147483647 {
-				return 0 // 溢出时返回0
-			}
-			return int(v)
-		case uint64:
-			// 检查uint64到int的安全转换
-			if v > 2147483647 {
-				return 0 // 溢出时返回0
-			}
-			return int(v)
-		case float32:
-			return int(v)
-		case float64:
-			return int(v)
-		case string:
-			if i, err := strconv.Atoi(v); err == nil {
-				return i
-			}
-		}
+		return convertToInt(value)
 	}
 	return 0
 }

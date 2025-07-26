@@ -11,6 +11,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package connector provides example connector implementations
+// Copyright (c) 2024 Edge Stream. All rights reserved.
 package connector
 
 import (
@@ -24,6 +26,16 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+)
+
+// 示例连接器常量
+const (
+	DefaultChannelBufferSize = 100
+	DefaultErrorChannelSize  = 10
+	DefaultConsoleBatchSize  = 1000
+	DefaultPriority          = 2
+	DefaultSessionGap        = 30 * time.Minute
+	DefaultWatermark         = 5 * time.Second
 )
 
 // FileSourceConnector 文件源连接器
@@ -111,7 +123,15 @@ func (c *FileSourceConnector) Start(ctx context.Context) error {
 		return fmt.Errorf("file_path not configured")
 	}
 
-	file, err := os.Open(filePath)
+	// 验证文件路径安全性
+	if filepath.IsAbs(filePath) {
+		return fmt.Errorf("absolute paths are not allowed for security reasons")
+	}
+	if strings.Contains(filePath, "..") {
+		return fmt.Errorf("path traversal is not allowed")
+	}
+
+	file, err := os.Open(filepath.Clean(filePath))
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
@@ -136,7 +156,9 @@ func (c *FileSourceConnector) Stop(ctx context.Context) error {
 	}
 
 	if c.file != nil {
-		c.file.Close()
+		if err := c.file.Close(); err != nil {
+			return fmt.Errorf("failed to close file: %w", err)
+		}
 		c.file = nil
 	}
 
@@ -195,13 +217,13 @@ func (c *FileSourceConnector) Configure(config map[string]interface{}) error {
 }
 
 // Read 读取数据
-func (c *FileSourceConnector) Read(ctx context.Context) (<-chan Message, <-chan error) {
-	msgChan := make(chan Message, 100)
-	errChan := make(chan error, 10)
+func (c *FileSourceConnector) Read(ctx context.Context) (msgChan <-chan Message, errChan <-chan error) {
+	msgCh := make(chan Message, DefaultChannelBufferSize)
+	errCh := make(chan error, DefaultErrorChannelSize)
 
 	go func() {
-		defer close(msgChan)
-		defer close(errChan)
+		defer close(msgCh)
+		defer close(errCh)
 
 		for {
 			select {
@@ -223,7 +245,7 @@ func (c *FileSourceConnector) Read(ctx context.Context) (<-chan Message, <-chan 
 						msg.SetHeader("source", "file")
 
 						select {
-						case msgChan <- msg:
+						case msgCh <- msg:
 							atomic.AddInt64(&c.metrics.MessagesProcessed, 1)
 							atomic.AddInt64(&c.metrics.BytesProcessed, int64(len(line)))
 						case <-ctx.Done():
@@ -233,7 +255,7 @@ func (c *FileSourceConnector) Read(ctx context.Context) (<-chan Message, <-chan 
 				} else {
 					if err := c.scanner.Err(); err != nil {
 						select {
-						case errChan <- err:
+						case errCh <- err:
 							atomic.AddInt64(&c.metrics.ErrorsCount, 1)
 						case <-ctx.Done():
 						}
@@ -244,7 +266,7 @@ func (c *FileSourceConnector) Read(ctx context.Context) (<-chan Message, <-chan 
 		}
 	}()
 
-	return msgChan, errChan
+	return msgCh, errCh
 }
 
 // Commit 提交偏移量
@@ -435,7 +457,7 @@ func (c *ConsoleSinkConnector) Flush(ctx context.Context) error {
 
 // GetWriteCapacity 获取写入容量
 func (c *ConsoleSinkConnector) GetWriteCapacity() int {
-	return 1000 // 控制台可以处理大量输出
+	return DefaultConsoleBatchSize // 控制台可以处理大量输出
 }
 
 // JSONTransformConnector JSON转换连接器
@@ -534,7 +556,7 @@ func (c *JSONTransformConnector) Start(ctx context.Context) error {
 				"function": "uppercase",
 			},
 			Enabled:  true,
-			Priority: 2,
+			Priority: DefaultPriority,
 		},
 	}
 
@@ -595,13 +617,13 @@ func (c *JSONTransformConnector) Configure(config map[string]interface{}) error 
 }
 
 // Transform 转换数据
-func (c *JSONTransformConnector) Transform(ctx context.Context, input <-chan Message) (<-chan Message, <-chan error) {
-	output := make(chan Message, 100)
-	errChan := make(chan error, 10)
+func (c *JSONTransformConnector) Transform(ctx context.Context, input <-chan Message) (outputChan <-chan Message, errorChan <-chan error) {
+	outputCh := make(chan Message, DefaultChannelBufferSize)
+	errorCh := make(chan error, DefaultErrorChannelSize)
 
 	go func() {
-		defer close(output)
-		defer close(errChan)
+		defer close(outputCh)
+		defer close(errorCh)
 
 		for {
 			select {
@@ -623,7 +645,7 @@ func (c *JSONTransformConnector) Transform(ctx context.Context, input <-chan Mes
 				transformedMsg, err := c.transformMessage(msg)
 				if err != nil {
 					select {
-					case errChan <- err:
+					case errorCh <- err:
 						atomic.AddInt64(&c.metrics.ErrorsCount, 1)
 					case <-ctx.Done():
 						return
@@ -632,7 +654,7 @@ func (c *JSONTransformConnector) Transform(ctx context.Context, input <-chan Mes
 				}
 
 				select {
-				case output <- transformedMsg:
+				case outputCh <- transformedMsg:
 					atomic.AddInt64(&c.metrics.MessagesProcessed, 1)
 				case <-ctx.Done():
 					return
@@ -641,12 +663,11 @@ func (c *JSONTransformConnector) Transform(ctx context.Context, input <-chan Mes
 		}
 	}()
 
-	return output, errChan
+	return outputCh, errorCh
 }
 
-// transformMessage 转换单个消息
-func (c *JSONTransformConnector) transformMessage(msg Message) (Message, error) {
-	// 尝试解析JSON
+// parseMessageToData 解析消息为数据映射
+func parseMessageToData(msg Message) map[string]interface{} {
 	var data map[string]interface{}
 	if str, ok := msg.GetValue().(string); ok {
 		if err := json.Unmarshal([]byte(str), &data); err != nil {
@@ -665,8 +686,50 @@ func (c *JSONTransformConnector) transformMessage(msg Message) (Message, error) 
 			}
 		}
 	}
+	return data
+}
 
-	// 应用转换规则
+// applyAddFieldRule 应用添加字段规则
+func applyAddFieldRule(data map[string]interface{}, rule TransformRule) {
+	field, ok := rule.Parameters["field"].(string)
+	if !ok {
+		return
+	}
+	value := rule.Parameters["value"]
+	if valueStr, ok := value.(string); ok && valueStr == "{{now}}" {
+		data[field] = time.Now().Format(time.RFC3339)
+	} else {
+		data[field] = value
+	}
+}
+
+// applyTransformFieldRule 应用字段转换规则
+func applyTransformFieldRule(data map[string]interface{}, rule TransformRule) {
+	field, ok := rule.Parameters["field"].(string)
+	if !ok {
+		return
+	}
+	function, ok := rule.Parameters["function"].(string)
+	if !ok {
+		return
+	}
+
+	if fieldValue, exists := data[field]; exists {
+		if str, ok := fieldValue.(string); ok {
+			switch function {
+			case "uppercase":
+				data[field] = strings.ToUpper(str)
+			case "lowercase":
+				data[field] = strings.ToLower(str)
+			case "trim":
+				data[field] = strings.TrimSpace(str)
+			}
+		}
+	}
+}
+
+// applyTransformRules 应用转换规则
+func (c *JSONTransformConnector) applyTransformRules(data map[string]interface{}) {
 	for _, rule := range c.rules {
 		if !rule.Enabled {
 			continue
@@ -674,42 +737,15 @@ func (c *JSONTransformConnector) transformMessage(msg Message) (Message, error) 
 
 		switch rule.Action {
 		case "add_field":
-			field, ok := rule.Parameters["field"].(string)
-			if !ok {
-				continue
-			}
-			value := rule.Parameters["value"]
-			if valueStr, ok := value.(string); ok && valueStr == "{{now}}" {
-				data[field] = time.Now().Format(time.RFC3339)
-			} else {
-				data[field] = value
-			}
-
+			applyAddFieldRule(data, rule)
 		case "transform_field":
-			field, ok := rule.Parameters["field"].(string)
-			if !ok {
-				continue
-			}
-			function, ok := rule.Parameters["function"].(string)
-			if !ok {
-				continue
-			}
-
-			if fieldValue, exists := data[field]; exists {
-				if str, ok := fieldValue.(string); ok {
-					switch function {
-					case "uppercase":
-						data[field] = strings.ToUpper(str)
-					case "lowercase":
-						data[field] = strings.ToLower(str)
-					case "trim":
-						data[field] = strings.TrimSpace(str)
-					}
-				}
-			}
+			applyTransformFieldRule(data, rule)
 		}
 	}
+}
 
+// createTransformedMessage 创建转换后的消息
+func createTransformedMessage(msg Message, data map[string]interface{}) (Message, error) {
 	// 序列化回JSON
 	transformedData, err := json.Marshal(data)
 	if err != nil {
@@ -729,6 +765,18 @@ func (c *JSONTransformConnector) transformMessage(msg Message) (Message, error) 
 	transformedMsg.SetHeader("transformer", "json-transform")
 
 	return transformedMsg, nil
+}
+
+// transformMessage 转换单个消息
+func (c *JSONTransformConnector) transformMessage(msg Message) (Message, error) {
+	// 解析消息为数据映射
+	data := parseMessageToData(msg)
+
+	// 应用转换规则
+	c.applyTransformRules(data)
+
+	// 创建转换后的消息
+	return createTransformedMessage(msg, data)
 }
 
 // GetTransformRules 获取转换规则

@@ -101,114 +101,132 @@ func TestConfigManagerEdgeCases(t *testing.T) {
 func TestConfigManagerDataTypes(t *testing.T) {
 	cm := NewStandardConfigManager("")
 
-	// 测试整数类型
 	t.Run("IntegerTypes", func(t *testing.T) {
-		testCases := []struct {
-			key   string
-			value interface{}
-		}{
-			{"int8", int8(127)},
-			{"int16", int16(32767)},
-			{"int32", int32(2147483647)},
-			{"int64", int64(9223372036854775807)},
-			{"uint8", uint8(255)},
-			{"uint16", uint16(65535)},
-			{"uint32", uint32(4294967295)},
-			{"uint64", uint64(18446744073709551615)},
-		}
-
-		for _, tc := range testCases {
-			err := cm.Set(tc.key, tc.value)
-			if err != nil {
-				t.Errorf("Failed to set %s: %v", tc.key, err)
-				continue
-			}
-			// 验证可以作为整数检索
-			intValue := cm.GetInt(tc.key)
-			if intValue == 0 {
-				t.Errorf("Failed to retrieve %s as int", tc.key)
-			}
-		}
+		testIntegerTypes(t, cm)
 	})
 
-	// 测试浮点类型
 	t.Run("FloatTypes", func(t *testing.T) {
-		testCases := []struct {
-			key   string
-			value interface{}
-		}{
-			{"float32", float32(3.14159)},
-			{"float64", float64(2.718281828459045)},
-		}
-
-		for _, tc := range testCases {
-			err := cm.Set(tc.key, tc.value)
-			if err != nil {
-				t.Errorf("Failed to set %s: %v", tc.key, err)
-				continue
-			}
-			// 验证可以作为浮点数检索
-			floatValue := cm.GetFloat64(tc.key)
-			if floatValue == 0.0 {
-				t.Errorf("Failed to retrieve %s as float64", tc.key)
-			}
-		}
+		testFloatTypes(t, cm)
 	})
 
-	// 测试布尔类型
 	t.Run("BooleanTypes", func(t *testing.T) {
-		testCases := []struct {
-			key   string
-			value bool
-		}{
-			{"bool.true", true},
-			{"bool.false", false},
-		}
-
-		for _, tc := range testCases {
-			err := cm.Set(tc.key, tc.value)
-			if err != nil {
-				t.Errorf("Failed to set %s: %v", tc.key, err)
-				continue
-			}
-			boolValue := cm.GetBool(tc.key)
-			if boolValue != tc.value {
-				t.Errorf("Boolean value mismatch for %s: expected %v, got %v", tc.key, tc.value, boolValue)
-			}
-		}
+		testBooleanTypes(t, cm)
 	})
 
-	// 测试复杂类型
 	t.Run("ComplexTypes", func(t *testing.T) {
-		// 测试切片
-		sliceValue := []string{"a", "b", "c"}
-		err := cm.Set("slice.value", sliceValue)
-		if err != nil {
-			t.Errorf("Failed to set slice: %v", err)
-		}
-
-		// 测试映射
-		mapValue := map[string]interface{}{
-			"key1": "value1",
-			"key2": 42,
-			"key3": true,
-		}
-		err = cm.Set("map.value", mapValue)
-		if err != nil {
-			t.Errorf("Failed to set map: %v", err)
-		}
-
-		// 测试结构体
-		type TestStruct struct {
-			Name  string
-			Value int
-		}
-		structValue := TestStruct{Name: "test", Value: 123}
-		err = cm.Set("struct.value", structValue)
-		if err != nil {
-			t.Errorf("Failed to set struct: %v", err)
-		}
+		testComplexTypes(t, cm)
 	})
+}
+
+func testIntegerTypes(t *testing.T, cm ConfigManager) {
+	testCases := []struct {
+		key           string
+		value         interface{}
+		expectedValid bool
+	}{
+		{"int8", int8(127), true},
+		{"int16", int16(32767), true},
+		{"int32", int32(2147483647), true},
+		{"int64", int64(2147483647), true},        // 在int范围内的int64
+		{"int64_large", int64(9223372036854775807), false}, // 超出int范围的int64
+		{"uint8", uint8(255), true},
+		{"uint16", uint16(65535), true},
+		{"uint32", uint32(2147483647), true},      // 在int范围内的uint32
+		{"uint32_large", uint32(4294967295), false}, // 超出int范围的uint32
+		{"uint64", uint64(2147483647), true},      // 在int范围内的uint64
+		{"uint64_large", uint64(18446744073709551615), false}, // 超出int范围的uint64
+	}
+
+	for _, tc := range testCases {
+		err := cm.Set(tc.key, tc.value)
+		if err != nil {
+			t.Errorf("Failed to set %s: %v", tc.key, err)
+			continue
+		}
+		// 验证可以作为整数检索
+		intValue := cm.GetInt(tc.key)
+		if tc.expectedValid && intValue == 0 {
+			t.Errorf("Failed to retrieve %s as int, expected non-zero but got 0", tc.key)
+		} else if !tc.expectedValid && intValue != 0 {
+			t.Errorf("Expected %s to return 0 due to overflow, but got %d", tc.key, intValue)
+		}
+	}
+}
+
+func testFloatTypes(t *testing.T, cm ConfigManager) {
+	testCases := []struct {
+		key   string
+		value interface{}
+	}{
+		{"float32", float32(3.14159)},
+		{"float64", float64(2.718281828459045)},
+	}
+
+	for _, tc := range testCases {
+		err := cm.Set(tc.key, tc.value)
+		if err != nil {
+			t.Errorf("Failed to set %s: %v", tc.key, err)
+			continue
+		}
+		// 验证可以作为浮点数检索
+		floatValue := cm.GetFloat64(tc.key)
+		if floatValue == 0.0 {
+			t.Errorf("Failed to retrieve %s as float64", tc.key)
+		}
+	}
+}
+
+func testBooleanTypes(t *testing.T, cm ConfigManager) {
+	testCases := []struct {
+		key   string
+		value bool
+	}{
+		{"bool.true", true},
+		{"bool.false", false},
+	}
+
+	for _, tc := range testCases {
+		err := cm.Set(tc.key, tc.value)
+		if err != nil {
+			t.Errorf("Failed to set %s: %v", tc.key, err)
+			continue
+		}
+		boolValue := cm.GetBool(tc.key)
+		if boolValue != tc.value {
+			t.Errorf("Boolean value mismatch for %s: expected %v, got %v", tc.key, tc.value, boolValue)
+		}
+	}
+}
+
+func testComplexTypes(t *testing.T, cm ConfigManager) {
+	// 测试切片
+	sliceValue := []string{"a", "b", "c"}
+	err := cm.Set("slice.value", sliceValue)
+	if err != nil {
+		t.Errorf("Failed to set slice: %v", err)
+	}
+
+	// 测试映射
+	mapValue := map[string]interface{}{
+		"key1": "value1",
+		"key2": 42,
+		"key3": true,
+	}
+	err = cm.Set("map.value", mapValue)
+	if err != nil {
+		t.Errorf("Failed to set map: %v", err)
+	}
+
+	// 测试结构体
+	type TestStruct struct {
+		Name  string
+		Value int
+	}
+	structValue := TestStruct{Name: "test", Value: 123}
+	err = cm.Set("struct.value", structValue)
+	if err != nil {
+		t.Errorf("Failed to set struct: %v", err)
+	}
 }
 
 // TestConfigManagerAdvancedConcurrency 测试高级并发安全场景

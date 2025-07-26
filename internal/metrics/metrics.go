@@ -132,6 +132,113 @@ func registerMetricWithRegistry(registry *prometheus.Registry, collector prometh
 	return nil
 }
 
+// getLabelNames 从标签映射中提取标签名称
+func (m *PrometheusMetric) getLabelNames(labels map[string]string) []string {
+	labelNames := make([]string, 0, len(labels))
+	for k := range labels {
+		labelNames = append(labelNames, k)
+	}
+	return labelNames
+}
+
+// registerMetricVec 注册向量指标的通用方法
+func (m *PrometheusMetric) registerMetricVec(registry *prometheus.Registry, collector prometheus.Collector, existingType string) {
+	if err := registerMetricWithRegistry(registry, collector); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			switch existingType {
+			case "counter":
+				if existingVec, ok := are.ExistingCollector.(*prometheus.CounterVec); ok {
+					m.counterVec = *existingVec
+				}
+			case "gauge":
+				if existingVec, ok := are.ExistingCollector.(*prometheus.GaugeVec); ok {
+					m.gaugeVec = *existingVec
+				}
+			case "histogram":
+				if existingVec, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok {
+					m.histogramVec = *existingVec
+				}
+			case "summary":
+				if existingVec, ok := are.ExistingCollector.(*prometheus.SummaryVec); ok {
+					m.summaryVec = *existingVec
+				}
+			}
+		}
+	}
+}
+
+// registerMetricSingle 注册单一指标的通用方法
+func (m *PrometheusMetric) registerMetricSingle(registry *prometheus.Registry, collector prometheus.Collector, existingType string) {
+	if err := registerMetricWithRegistry(registry, collector); err != nil {
+		if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
+			switch existingType {
+			case "counter":
+				if existing, ok := are.ExistingCollector.(prometheus.Counter); ok {
+					m.counter = existing
+				}
+			case "gauge":
+				if existing, ok := are.ExistingCollector.(prometheus.Gauge); ok {
+					m.gauge = existing
+				}
+			case "histogram":
+				if existing, ok := are.ExistingCollector.(prometheus.Histogram); ok {
+					m.histogram = existing
+				}
+			case "summary":
+				if existing, ok := are.ExistingCollector.(prometheus.Summary); ok {
+					m.summary = existing
+				}
+			}
+		}
+	}
+}
+
+// createCounterMetric 创建Counter指标
+func (m *PrometheusMetric) createCounterMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+	if len(labels) > 0 {
+		labelNames := m.getLabelNames(labels)
+		m.counterVec = *prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: name,
+				Help: "Counter metric for " + name,
+			},
+			labelNames,
+		)
+		m.registerMetricVec(registry, &m.counterVec, "counter")
+	} else {
+		m.counter = prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: name,
+				Help: "Counter metric for " + name,
+			},
+		)
+		m.registerMetricSingle(registry, m.counter, "counter")
+	}
+}
+
+// createGaugeMetric 创建Gauge指标
+func (m *PrometheusMetric) createGaugeMetric(name string, labels map[string]string, registry *prometheus.Registry) {
+	if len(labels) > 0 {
+		labelNames := m.getLabelNames(labels)
+		m.gaugeVec = *prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: name,
+				Help: "Gauge metric for " + name,
+			},
+			labelNames,
+		)
+		m.registerMetricVec(registry, &m.gaugeVec, "gauge")
+	} else {
+		m.gauge = prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: name,
+				Help: "Gauge metric for " + name,
+			},
+		)
+		m.registerMetricSingle(registry, m.gauge, "gauge")
+	}
+}
+
 // NewPrometheusMetric 创建Prometheus指标
 func NewPrometheusMetric(name string, metricType MetricType, labels map[string]string, registry *prometheus.Registry) *PrometheusMetric {
 	if labels == nil {
@@ -148,75 +255,9 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 	// 根据类型创建相应的Prometheus指标
 	switch metricType {
 	case Counter:
-		if len(labels) > 0 {
-			labelNames := make([]string, 0, len(labels))
-			for k := range labels {
-				labelNames = append(labelNames, k)
-			}
-			metric.counterVec = *prometheus.NewCounterVec(
-				prometheus.CounterOpts{
-					Name: name,
-					Help: "Counter metric for " + name,
-				},
-				labelNames,
-			)
-			if err := registerMetricWithRegistry(registry, &metric.counterVec); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingVec, ok := are.ExistingCollector.(*prometheus.CounterVec); ok {
-						metric.counterVec = *existingVec
-					}
-				}
-			}
-		} else {
-			metric.counter = prometheus.NewCounter(
-				prometheus.CounterOpts{
-					Name: name,
-					Help: "Counter metric for " + name,
-				},
-			)
-			if err := registerMetricWithRegistry(registry, metric.counter); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingCounter, ok := are.ExistingCollector.(prometheus.Counter); ok {
-						metric.counter = existingCounter
-					}
-				}
-			}
-		}
+		metric.createCounterMetric(name, labels, registry)
 	case Gauge:
-		if len(labels) > 0 {
-			labelNames := make([]string, 0, len(labels))
-			for k := range labels {
-				labelNames = append(labelNames, k)
-			}
-			metric.gaugeVec = *prometheus.NewGaugeVec(
-				prometheus.GaugeOpts{
-					Name: name,
-					Help: "Gauge metric for " + name,
-				},
-				labelNames,
-			)
-			if err := registerMetricWithRegistry(registry, &metric.gaugeVec); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingVec, ok := are.ExistingCollector.(*prometheus.GaugeVec); ok {
-						metric.gaugeVec = *existingVec
-					}
-				}
-			}
-		} else {
-			metric.gauge = prometheus.NewGauge(
-				prometheus.GaugeOpts{
-					Name: name,
-					Help: "Gauge metric for " + name,
-				},
-			)
-			if err := registerMetricWithRegistry(registry, metric.gauge); err != nil {
-				if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-					if existingGauge, ok := are.ExistingCollector.(prometheus.Gauge); ok {
-						metric.gauge = existingGauge
-					}
-				}
-			}
-		}
+		metric.createGaugeMetric(name, labels, registry)
 	case Histogram:
 		metric.createHistogramMetric(name, labels, registry)
 	case Summary:
@@ -229,10 +270,7 @@ func NewPrometheusMetric(name string, metricType MetricType, labels map[string]s
 // createHistogramMetric 创建Histogram指标
 func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]string, registry *prometheus.Registry) {
 	if len(labels) > 0 {
-		labelNames := make([]string, 0, len(labels))
-		for k := range labels {
-			labelNames = append(labelNames, k)
-		}
+		labelNames := m.getLabelNames(labels)
 		m.histogramVec = *prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    name,
@@ -241,13 +279,7 @@ func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]
 			},
 			labelNames,
 		)
-		if err := registerMetricWithRegistry(registry, &m.histogramVec); err != nil {
-			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-				if existingVec, ok := are.ExistingCollector.(*prometheus.HistogramVec); ok {
-					m.histogramVec = *existingVec
-				}
-			}
-		}
+		m.registerMetricVec(registry, &m.histogramVec, "histogram")
 	} else {
 		m.histogram = prometheus.NewHistogram(
 			prometheus.HistogramOpts{
@@ -256,23 +288,14 @@ func (m *PrometheusMetric) createHistogramMetric(name string, labels map[string]
 				Buckets: prometheus.DefBuckets,
 			},
 		)
-		if err := registerMetricWithRegistry(registry, m.histogram); err != nil {
-			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-				if existingHistogram, ok := are.ExistingCollector.(prometheus.Histogram); ok {
-					m.histogram = existingHistogram
-				}
-			}
-		}
+		m.registerMetricSingle(registry, m.histogram, "histogram")
 	}
 }
 
 // createSummaryMetric 创建Summary指标
 func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]string, registry *prometheus.Registry) {
 	if len(labels) > 0 {
-		labelNames := make([]string, 0, len(labels))
-		for k := range labels {
-			labelNames = append(labelNames, k)
-		}
+		labelNames := m.getLabelNames(labels)
 		m.summaryVec = *prometheus.NewSummaryVec(
 			prometheus.SummaryOpts{
 				Name: name,
@@ -280,13 +303,7 @@ func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]st
 			},
 			labelNames,
 		)
-		if err := registerMetricWithRegistry(registry, &m.summaryVec); err != nil {
-			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-				if existingVec, ok := are.ExistingCollector.(*prometheus.SummaryVec); ok {
-					m.summaryVec = *existingVec
-				}
-			}
-		}
+		m.registerMetricVec(registry, &m.summaryVec, "summary")
 	} else {
 		m.summary = prometheus.NewSummary(
 			prometheus.SummaryOpts{
@@ -294,13 +311,7 @@ func (m *PrometheusMetric) createSummaryMetric(name string, labels map[string]st
 				Help: "Summary metric for " + name,
 			},
 		)
-		if err := registerMetricWithRegistry(registry, m.summary); err != nil {
-			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-				if existingSummary, ok := are.ExistingCollector.(prometheus.Summary); ok {
-					m.summary = existingSummary
-				}
-			}
-		}
+		m.registerMetricSingle(registry, m.summary, "summary")
 	}
 }
 
@@ -350,116 +361,122 @@ func (m *PrometheusMetric) GetTimestamp() time.Time {
 // GetPrometheusMetric 获取Prometheus指标
 func (m *PrometheusMetric) GetPrometheusMetric() prometheus.Collector {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
 
 	switch m.metricType {
 	case Counter:
 		if m.counter != nil {
+			m.mu.RUnlock()
 			return m.counter
 		}
+		m.mu.RUnlock()
 		return m.counterVec
 	case Gauge:
 		if m.gauge != nil {
+			m.mu.RUnlock()
 			return m.gauge
 		}
+		m.mu.RUnlock()
 		return m.gaugeVec
 	case Histogram:
 		if m.histogram != nil {
+			m.mu.RUnlock()
 			return m.histogram
 		}
+		m.mu.RUnlock()
 		return m.histogramVec
 	case Summary:
 		if m.summary != nil {
+			m.mu.RUnlock()
 			return m.summary
 		}
+		m.mu.RUnlock()
 		return m.summaryVec
 	default:
+		m.mu.RUnlock()
 		return nil
 	}
+}
+
+// getLabelValues 获取标签值切片
+func (m *PrometheusMetric) getLabelValues() []string {
+	labelValues := make([]string, 0, len(m.labels))
+	for _, v := range m.labels {
+		labelValues = append(labelValues, v)
+	}
+	return labelValues
 }
 
 // SetValue 设置指标值
 func (m *PrometheusMetric) SetValue(value float64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.timestamp = time.Now()
+	m.updateTimestamp()
 
 	switch m.metricType {
 	case Gauge:
 		if m.gauge != nil {
 			m.gauge.Set(value)
 		} else {
-			labelValues := make([]string, 0, len(m.labels))
-			for _, v := range m.labels {
-				labelValues = append(labelValues, v)
+			m.gaugeVec.WithLabelValues(m.getLabelValues()...).Set(value)
+		}
+	case Counter, Histogram, Summary:
+		// 这些类型不支持SetValue操作
+	}
+}
+
+// updateTimestamp 更新时间戳的通用方法
+func (m *PrometheusMetric) updateTimestamp() {
+	m.timestamp = time.Now()
+}
+
+// performMetricOperation 执行指标操作的通用方法
+func (m *PrometheusMetric) performMetricOperation(operationType string, value float64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.updateTimestamp()
+
+	labelValues := m.getLabelValues()
+
+	switch operationType {
+	case "add":
+		switch m.metricType {
+		case Counter:
+			if m.counter != nil {
+				m.counter.Add(value)
+			} else {
+				m.counterVec.WithLabelValues(labelValues...).Add(value)
 			}
-			m.gaugeVec.WithLabelValues(labelValues...).Set(value)
+		case Gauge:
+			if m.gauge != nil {
+				m.gauge.Add(value)
+			} else {
+				m.gaugeVec.WithLabelValues(labelValues...).Add(value)
+			}
+		}
+	case "observe":
+		switch m.metricType {
+		case Histogram:
+			if m.histogram != nil {
+				m.histogram.Observe(value)
+			} else {
+				m.histogramVec.WithLabelValues(labelValues...).Observe(value)
+			}
+		case Summary:
+			if m.summary != nil {
+				m.summary.Observe(value)
+			} else {
+				m.summaryVec.WithLabelValues(labelValues...).Observe(value)
+			}
 		}
 	}
 }
 
 // AddValue 增加指标值
 func (m *PrometheusMetric) AddValue(delta float64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.timestamp = time.Now()
-
-	switch m.metricType {
-	case Counter:
-		if m.counter != nil {
-			m.counter.Add(delta)
-		} else {
-			labelValues := make([]string, 0, len(m.labels))
-			for _, v := range m.labels {
-				labelValues = append(labelValues, v)
-			}
-			m.counterVec.WithLabelValues(labelValues...).Add(delta)
-		}
-	case Gauge:
-		if m.gauge != nil {
-			m.gauge.Add(delta)
-		} else {
-			labelValues := make([]string, 0, len(m.labels))
-			for _, v := range m.labels {
-				labelValues = append(labelValues, v)
-			}
-			m.gaugeVec.WithLabelValues(labelValues...).Add(delta)
-		}
-	case Histogram, Summary:
-		// Histogram和Summary不支持AddValue操作
-		// 这些类型应该使用ObserveValue方法
-	}
+	m.performMetricOperation("add", delta)
 }
 
 // ObserveValue 观察值（用于直方图和摘要）
 func (m *PrometheusMetric) ObserveValue(value float64) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.timestamp = time.Now()
-
-	switch m.metricType {
-	case Histogram:
-		if m.histogram != nil {
-			m.histogram.Observe(value)
-		} else {
-			labelValues := make([]string, 0, len(m.labels))
-			for _, v := range m.labels {
-				labelValues = append(labelValues, v)
-			}
-			m.histogramVec.WithLabelValues(labelValues...).Observe(value)
-		}
-	case Summary:
-		if m.summary != nil {
-			m.summary.Observe(value)
-		} else {
-			labelValues := make([]string, 0, len(m.labels))
-			for _, v := range m.labels {
-				labelValues = append(labelValues, v)
-			}
-			m.summaryVec.WithLabelValues(labelValues...).Observe(value)
-		}
-	case Counter, Gauge:
-		// Counter和Gauge不支持ObserveValue操作
-		// 这些类型应该使用SetValue或AddValue方法
-	}
+	m.performMetricOperation("observe", value)
 }

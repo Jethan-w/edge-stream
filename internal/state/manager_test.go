@@ -69,88 +69,97 @@ func (m *MemoryCheckpointManager) DeleteCheckpoint(processorID string) error {
 func TestMemoryStateManager(t *testing.T) {
 	sm := NewStandardStateManager(nil)
 
-	// 测试基本的状态操作
 	t.Run("BasicOperations", func(t *testing.T) {
-		key := "test_key"
-		value := "test_value"
-
-		// 测试设置状态
-		state, err := sm.CreateState("test_state", StateTypeMemory)
-		if err != nil {
-			t.Errorf("CreateState failed: %v", err)
-		}
-		err = state.Set(key, value)
-		if err != nil {
-			t.Errorf("Set failed: %v", err)
-		}
-
-		// 测试获取状态
-		retrievedValue, exists := state.Get(key)
-		if !exists {
-			t.Errorf("Get failed: key not found")
-		}
-		if retrievedValue != value {
-			t.Errorf("Expected %s, got %s", value, retrievedValue)
-		}
-
-		// 测试状态存在性检查
-		exists = state.Exists(key)
-		if !exists {
-			t.Error("Expected state to exist")
-		}
-
-		// 测试删除状态
-		err = state.Delete(key)
-		if err != nil {
-			t.Errorf("Delete failed: %v", err)
-		}
-
-		// 验证状态已删除
-		exists = state.Exists(key)
-		if exists {
-			t.Error("Expected state to be deleted")
-		}
+		testBasicOperations(t, sm)
 	})
 
-	// 测试不存在的键
 	t.Run("NonExistentKey", func(t *testing.T) {
-		state, _ := sm.CreateState("test_state2", StateTypeMemory)
-		_, exists := state.Get("nonexistent")
-		if exists {
-			t.Error("Expected false for nonexistent key")
-		}
-
-		exists = state.Exists("nonexistent")
-		if exists {
-			t.Error("Expected nonexistent key to return false")
-		}
+		testNonExistentKey(t, sm)
 	})
 
-	// 测试清空所有状态
 	t.Run("ClearAll", func(t *testing.T) {
-		state, _ := sm.CreateState("test_state3", StateTypeMemory)
-		// 添加一些状态
-		if err := state.Set("key1", "value1"); err != nil {
-			t.Errorf("Failed to set key1: %v", err)
-		}
-		if err := state.Set("key2", "value2"); err != nil {
-			t.Errorf("Failed to set key2: %v", err)
-		}
-		if err := state.Set("key3", "value3"); err != nil {
-			t.Errorf("Failed to set key3: %v", err)
-		}
-
-		// 清空所有状态
-		err := state.Clear()
-		if err != nil {
-			t.Errorf("Clear failed: %v", err)
-		}
-
-		// 验证所有状态都被清空
-		if state.Exists("key1") || state.Exists("key2") || state.Exists("key3") {
-			t.Error("Expected all states to be cleared")
-		}
+		testClearAll(t, sm)
 	})
+}
+
+func testBasicOperations(t *testing.T, sm StateManager) {
+	key := "test_key"
+	value := "test_value"
+
+	// 测试设置状态
+	state, err := sm.CreateState("test_state", StateTypeMemory)
+	if err != nil {
+		t.Errorf("CreateState failed: %v", err)
+	}
+	err = state.Set(key, value)
+	if err != nil {
+		t.Errorf("Set failed: %v", err)
+	}
+
+	// 测试获取状态
+	retrievedValue, exists := state.Get(key)
+	if !exists {
+		t.Errorf("Get failed: key not found")
+	}
+	if retrievedValue != value {
+		t.Errorf("Expected %s, got %s", value, retrievedValue)
+	}
+
+	// 测试状态存在性检查
+	exists = state.Exists(key)
+	if !exists {
+		t.Error("Expected state to exist")
+	}
+
+	// 测试删除状态
+	err = state.Delete(key)
+	if err != nil {
+		t.Errorf("Delete failed: %v", err)
+	}
+
+	// 验证状态已删除
+	exists = state.Exists(key)
+	if exists {
+		t.Error("Expected state to be deleted")
+	}
+}
+
+func testNonExistentKey(t *testing.T, sm StateManager) {
+	state, _ := sm.CreateState("test_state2", StateTypeMemory)
+	_, exists := state.Get("nonexistent")
+	if exists {
+		t.Error("Expected false for nonexistent key")
+	}
+
+	exists = state.Exists("nonexistent")
+	if exists {
+		t.Error("Expected nonexistent key to return false")
+	}
+}
+
+func testClearAll(t *testing.T, sm StateManager) {
+	state, _ := sm.CreateState("test_state3", StateTypeMemory)
+	// 添加一些状态
+	if err := state.Set("key1", "value1"); err != nil {
+		t.Errorf("Failed to set key1: %v", err)
+	}
+	if err := state.Set("key2", "value2"); err != nil {
+		t.Errorf("Failed to set key2: %v", err)
+	}
+	if err := state.Set("key3", "value3"); err != nil {
+		t.Errorf("Failed to set key3: %v", err)
+	}
+
+	// 清空所有状态
+	err := state.Clear()
+	if err != nil {
+		t.Errorf("Clear failed: %v", err)
+	}
+
+	// 验证所有状态都被清空
+	if state.Exists("key1") || state.Exists("key2") || state.Exists("key3") {
+		t.Error("Expected all states to be cleared")
+	}
 }
 
 func TestStateManagerConcurrency(t *testing.T) {

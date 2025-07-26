@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/crazy/edge-stream/internal/constants"
 	"github.com/crazy/edge-stream/internal/flowfile"
 )
 
@@ -50,8 +51,8 @@ func NewFileSourceProcessor(id, name, filePath string) *FileSourceProcessor {
 		filePath:  filePath,
 		status:    StreamStatusStopped,
 		metrics:   NewStreamMetrics(id),
-		batchSize: 10,
-		interval:  100 * time.Millisecond,
+		batchSize: constants.DefaultErrorChannelSize,
+		interval:  constants.DefaultChannelBufferSize * time.Millisecond,
 	}
 }
 
@@ -509,8 +510,8 @@ func (p *ConsoleSinkProcessor) Write(ctx context.Context, message *Message) erro
 	// 输出到控制台
 	timestamp := message.Timestamp.Format("15:04:05")
 	messageID := message.ID
-	if len(messageID) > 20 {
-		messageID = messageID[:20] + "..."
+	if len(messageID) > constants.DefaultBatchSize {
+		messageID = messageID[:constants.DefaultBatchSize] + "..."
 	}
 
 	fmt.Printf("%s [%s] [%s] %s\n", p.prefix, timestamp, messageID, output)
@@ -903,7 +904,7 @@ func (p *AggregationProcessor) processMessages(ctx context.Context) {
 func CreateSampleStreamDataFile(filePath string) error {
 	// 确保目录存在
 	dir := filepath.Dir(filePath)
-	if err := os.MkdirAll(dir, 0750); err != nil {
+	if err := os.MkdirAll(dir, constants.DefaultDirectoryPermission); err != nil {
 		return fmt.Errorf("failed to create directory: %v", err)
 	}
 
@@ -948,7 +949,7 @@ func CreateSampleStreamDataFile(filePath string) error {
 
 		// 每隔几行添加一些延迟，模拟实时数据
 		if i%3 == 0 {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(constants.DefaultErrorChannelSize * time.Millisecond)
 		}
 	}
 

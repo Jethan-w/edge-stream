@@ -18,6 +18,9 @@ package performance
 // Version represents the performance package version
 const Version = "1.0.0"
 
+// DefaultIterations 默认基准测试迭代次数
+const DefaultIterations = 1000000
+
 // BenchmarkConfig holds configuration for performance benchmarks
 type BenchmarkConfig struct {
 	// Iterations specifies the number of benchmark iterations
@@ -33,7 +36,7 @@ type BenchmarkConfig struct {
 // DefaultBenchmarkConfig returns the default benchmark configuration
 func DefaultBenchmarkConfig() *BenchmarkConfig {
 	return &BenchmarkConfig{
-		Iterations: 1000000,
+		Iterations: DefaultIterations,
 		Timeout:    "10m",
 		MemProfile: true,
 		CPUProfile: false,
