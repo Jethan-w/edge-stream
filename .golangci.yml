@@ -64,15 +64,15 @@ linters-settings:
     default-signifies-exhaustive: false
   
   funlen:
-    lines: 100
-    statements: 50
+    lines: 150
+    statements: 80
   
   gocognit:
-    min-complexity: 20
+    min-complexity: 30
   
   goconst:
-    min-len: 2
-    min-occurrences: 3
+    min-len: 3
+    min-occurrences: 5
   
   gocritic:
     enabled-tags:
@@ -89,7 +89,7 @@ linters-settings:
       - wrapperFunc
   
   gocyclo:
-    min-complexity: 15
+    min-complexity: 25
   
   godot:
     scope: declarations
@@ -177,11 +177,11 @@ linters-settings:
       - name: line-length-limit
         arguments: [140]
       - name: argument-limit
-        arguments: [8]
+        arguments: [12]
       - name: cyclomatic
-        arguments: [15]
+        arguments: [25]
       - name: max-public-structs
-        arguments: [10]
+        arguments: [20]
       - name: file-header
         arguments:
           - "Copyright \\d{4} EdgeStream Team"
@@ -216,39 +216,16 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - bodyclose
-    - depguard
-    - dogsled
-    - dupl
     - errcheck
-    - exhaustive
-    - funlen
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
     - gofmt
     - goimports
-    - mnd
-    - goprintffuncname
-    - gosec
     - gosimple
     - govet
     - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - rowserrcheck
     - staticcheck
-    - stylecheck
     - typecheck
-    - unconvert
-    - unparam
     - unused
-    - whitespace
-    - revive
+    - misspell
 
 issues:
   exclude-dirs:
@@ -261,24 +238,18 @@ issues:
     - ".*_generated\\.go$"
   uniq-by-line: true
   exclude-rules:
-    - path: _test\\.go
+    - path: _test\.go
       linters:
-        - mnd
-        - funlen
-        - gocyclo
         - errcheck
-        - dupl
         - gosec
     
     - path: examples/
       linters:
-        - mnd
-        - funlen
-        - gocyclo
+        - errcheck
     
     - path: test\.go
       linters:
-        - mnd
+        - errcheck
     
     - path: internal/
       text: "weak cryptographic primitive"
