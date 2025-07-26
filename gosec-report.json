@@ -1,0 +1,1052 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "153: \t\tmetricsState.Set(\"requests_total\", rand.Intn(15000))\n154: \t\tmetricsState.Set(\"active_connections\", rand.Intn(800))\n155: \t\ttime.Sleep(2 * time.Second)\n",
+			"line": "154",
+			"column": "42",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "152: \n153: \t\tmetricsState.Set(\"requests_total\", rand.Intn(15000))\n154: \t\tmetricsState.Set(\"active_connections\", rand.Intn(800))\n",
+			"line": "153",
+			"column": "38",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "149: \t\t\t\"last_activity\": time.Now(),\n150: \t\t\t\"page_views\":    rand.Intn(50),\n151: \t\t})\n",
+			"line": "150",
+			"column": "21",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "93: \t\t\"active_connections\": rand.Intn(500),\n94: \t\t\"memory_usage\":       rand.Float64() * 100,\n95: \t}\n",
+			"line": "94",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "92: \t\t\"response_time_avg\":  rand.Float64() * 1000,\n93: \t\t\"active_connections\": rand.Intn(500),\n94: \t\t\"memory_usage\":       rand.Float64() * 100,\n",
+			"line": "93",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "91: \t\t\"errors_total\":       rand.Intn(100),\n92: \t\t\"response_time_avg\":  rand.Float64() * 1000,\n93: \t\t\"active_connections\": rand.Intn(500),\n",
+			"line": "92",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "90: \t\t\"requests_total\":     rand.Intn(10000),\n91: \t\t\"errors_total\":       rand.Intn(100),\n92: \t\t\"response_time_avg\":  rand.Float64() * 1000,\n",
+			"line": "91",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "89: \tmetricsData := map[string]interface{}{\n90: \t\t\"requests_total\":     rand.Intn(10000),\n91: \t\t\"errors_total\":       rand.Intn(100),\n",
+			"line": "90",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "66: \t\t\t\"login_time\": time.Now(),\n67: \t\t\t\"ip_address\": fmt.Sprintf(\"192.168.1.%d\", rand.Intn(255)),\n68: \t\t\t\"user_agent\": \"EdgeStream-Client/1.0\",\n",
+			"line": "67",
+			"column": "46",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "110: \t\toperation := operations[rand.Intn(len(operations))]\n111: \t\terrorType := errorTypes[rand.Intn(len(errorTypes))]\n112: \n",
+			"line": "111",
+			"column": "27",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "109: \tfor i := 0; i \u003c 10; i++ {\n110: \t\toperation := operations[rand.Intn(len(operations))]\n111: \t\terrorType := errorTypes[rand.Intn(len(errorTypes))]\n",
+			"line": "110",
+			"column": "27",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "95: \t\t// 模拟连接数\n96: \t\tconnectionCount := int64(rand.Intn(50) + 5)\n97: \t\tcollector.RecordConnectionCount(component, connectionCount)\n",
+			"line": "96",
+			"column": "28",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "91: \t\t// 模拟队列深度\n92: \t\tqueueDepth := int64(rand.Intn(1000) + 10)\n93: \t\tcollector.RecordQueueDepth(component+\"_queue\", queueDepth)\n",
+			"line": "92",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "87: \t\t// 模拟内存使用\n88: \t\tmemoryUsage := int64(rand.Intn(100)*1024*1024 + 50*1024*1024) // 50-150MB\n89: \t\tcollector.RecordMemoryUsage(component, memoryUsage)\n",
+			"line": "88",
+			"column": "24",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "72: \t\t// 模拟吞吐量\n73: \t\tthroughput := int64(rand.Intn(1000) + 100)\n74: \t\tcollector.RecordThroughput(operation, throughput, map[string]string{\n",
+			"line": "73",
+			"column": "23",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "65: \t\t// 模拟处理时间\n66: \t\tprocessingTime := time.Duration(rand.Intn(100)+10) * time.Millisecond\n67: \t\tcollector.RecordLatency(operation, processingTime, map[string]string{\n",
+			"line": "66",
+			"column": "35",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\metrics\\main.go",
+			"code": "62: \tfor i := 0; i \u003c 20; i++ {\n63: \t\toperation := operations[rand.Intn(len(operations))]\n64: \n",
+			"line": "63",
+			"column": "27",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\integration\\main.go",
+			"code": "222: \t// 模拟数据转换\n223: \ttime.Sleep(time.Duration(rand.Intn(50)+10) * time.Millisecond)\n224: \n",
+			"line": "223",
+			"column": "27",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\integration\\main.go",
+			"code": "124: \t\t\te.metricCollector.RecordQueueDepth(\"processing_queue\", int64(rand.Intn(1000)+100))\n125: \t\t\te.metricCollector.RecordConnectionCount(\"database\", int64(rand.Intn(20)+5))\n126: \n",
+			"line": "125",
+			"column": "62",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\integration\\main.go",
+			"code": "123: \t\t\te.metricCollector.RecordMemoryUsage(\"engine\", int64(rand.Intn(100)*1024*1024+50*1024*1024))\n124: \t\t\te.metricCollector.RecordQueueDepth(\"processing_queue\", int64(rand.Intn(1000)+100))\n125: \t\t\te.metricCollector.RecordConnectionCount(\"database\", int64(rand.Intn(20)+5))\n",
+			"line": "124",
+			"column": "65",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "338",
+				"url": "https://cwe.mitre.org/data/definitions/338.html"
+			},
+			"rule_id": "G404",
+			"details": "Use of weak random number generator (math/rand or math/rand/v2 instead of crypto/rand)",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\integration\\main.go",
+			"code": "122: \t\t\t// 模拟系统指标\n123: \t\t\te.metricCollector.RecordMemoryUsage(\"engine\", int64(rand.Intn(100)*1024*1024+50*1024*1024))\n124: \t\t\te.metricCollector.RecordQueueDepth(\"processing_queue\", int64(rand.Intn(1000)+100))\n",
+			"line": "123",
+			"column": "56",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "676",
+				"url": "https://cwe.mitre.org/data/definitions/676.html"
+			},
+			"rule_id": "G114",
+			"details": "Use of net/http serve function that has no support for setting timeouts",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\prometheus\\main.go",
+			"code": "41: \t\tfmt.Println(\"📊 Prometheus metrics server started at http://localhost:8080/metrics\")\n42: \t\tif err := http.ListenAndServe(\":8080\", mux); err != nil {\n43: \t\t\tlog.Printf(\"HTTP server error: %v\", err)\n",
+			"line": "42",
+			"column": "13",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\internal\\state\\checkpoint.go",
+			"code": "128: \t\tfilePath := filepath.Join(fcm.basePath, file.Name())\n129: \t\tdata, err := os.ReadFile(filePath)\n130: \t\tif err != nil {\n",
+			"line": "129",
+			"column": "16",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\internal\\state\\checkpoint.go",
+			"code": "88: \tfilePath := filepath.Join(fcm.basePath, targetFile)\n89: \tdata, err := os.ReadFile(filePath)\n90: \tif err != nil {\n",
+			"line": "89",
+			"column": "15",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "22",
+				"url": "https://cwe.mitre.org/data/definitions/22.html"
+			},
+			"rule_id": "G304",
+			"details": "Potential file inclusion via variable",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\internal\\connector\\examples.go",
+			"code": "848: \n849: \tfile, err := os.Create(filePath)\n850: \tif err != nil {\n",
+			"line": "849",
+			"column": "15",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "118",
+				"url": "https://cwe.mitre.org/data/definitions/118.html"
+			},
+			"rule_id": "G601",
+			"details": "Implicit memory aliasing in for loop.",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\internal\\connector\\examples.go",
+			"code": "774: \t\tcase \"transform_field\":\n775: \t\t\tapplyTransformFieldRule(data, \u0026rule)\n776: \t\t}\n",
+			"line": "775",
+			"column": "34",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "118",
+				"url": "https://cwe.mitre.org/data/definitions/118.html"
+			},
+			"rule_id": "G601",
+			"details": "Implicit memory aliasing in for loop.",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\internal\\connector\\examples.go",
+			"code": "772: \t\tcase \"add_field\":\n773: \t\t\tapplyAddFieldRule(data, \u0026rule)\n774: \t\tcase \"transform_field\":\n",
+			"line": "773",
+			"column": "28",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "276",
+				"url": "https://cwe.mitre.org/data/definitions/276.html"
+			},
+			"rule_id": "G301",
+			"details": "Expect directory permissions to be 0750 or less",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\mockdemo\\main.go",
+			"code": "61: \toutputDir := \"./data/output\"\n62: \tif err := os.MkdirAll(outputDir, 0755); err != nil {\n63: \t\tlog.Printf(\"创建输出目录失败: %v\", err)\n",
+			"line": "62",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "153: \t\tmetricsState.Set(\"requests_total\", rand.Intn(15000))\n154: \t\tmetricsState.Set(\"active_connections\", rand.Intn(800))\n155: \t\ttime.Sleep(2 * time.Second)\n",
+			"line": "154",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "152: \n153: \t\tmetricsState.Set(\"requests_total\", rand.Intn(15000))\n154: \t\tmetricsState.Set(\"active_connections\", rand.Intn(800))\n",
+			"line": "153",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "146: \tfor i := 0; i \u003c 3; i++ {\n147: \t\tuserState.Set(\"user_1\", map[string]interface{}{\n148: \t\t\t\"login_time\":    time.Now(),\n149: \t\t\t\"last_activity\": time.Now(),\n150: \t\t\t\"page_views\":    rand.Intn(50),\n151: \t\t})\n152: \n",
+			"line": "147-151",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "97: \tfor key, value := range metricsData {\n98: \t\tmetricsState.Set(key, value)\n99: \t\ttime.Sleep(50 * time.Millisecond)\n",
+			"line": "98",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "80: \t\tcacheValue := fmt.Sprintf(\"cached_value_%s_%d\", key, time.Now().Unix())\n81: \t\tcacheState.Set(key, cacheValue)\n82: \t\ttime.Sleep(100 * time.Millisecond)\n",
+			"line": "81",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\state\\main.go",
+			"code": "69: \t\t}\n70: \t\tuserState.Set(userID, sessionData)\n71: \t\ttime.Sleep(200 * time.Millisecond)\n",
+			"line": "70",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\mockdemo\\main.go",
+			"code": "112: \n113: \tsink.Close()\n114: \tlog.Printf(\"MySQL到文件处理完成，共处理 %d 条记录，输出文件: %s\", processedCount, filePath)\n",
+			"line": "113",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\integration\\main.go",
+			"code": "99: func (e *EdgeStreamEngine) watchConfig(ctx context.Context) {\n100: \te.configManager.Watch(ctx, func(key string, oldValue, newValue interface{}) {\n101: \t\tfmt.Printf(\"配置变更: %s = %v -\u003e %v\\n\", key, oldValue, newValue)\n102: \t\te.metricCollector.RecordCounter(\"config_changes_total\", 1, map[string]string{\n103: \t\t\t\"key\": key,\n104: \t\t})\n105: \t})\n106: }\n",
+			"line": "100-105",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\connector\\main.go",
+			"code": "34: \t\tdefer cancel()\n35: \t\tmanager.Close(ctx)\n36: \t}()\n",
+			"line": "35",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\config\\main.go",
+			"code": "166: \tos.Setenv(\"EDGE_STREAM_SERVER_PORT\", \"9090\")\n167: \tos.Setenv(\"EDGE_STREAM_LOGGING_LEVEL\", \"debug\")\n168: \n",
+			"line": "167",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\config\\main.go",
+			"code": "165: \n166: \tos.Setenv(\"EDGE_STREAM_SERVER_PORT\", \"9090\")\n167: \tos.Setenv(\"EDGE_STREAM_LOGGING_LEVEL\", \"debug\")\n",
+			"line": "166",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "116: \tcm.Set(\"monitoring.http_server.enabled\", true)\n117: \tcm.Set(\"monitoring.http_server.port\", 9090)\n118: }\n",
+			"line": "117",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "115: \tcm.Set(\"monitoring.export_format\", \"json\")\n116: \tcm.Set(\"monitoring.http_server.enabled\", true)\n117: \tcm.Set(\"monitoring.http_server.port\", 9090)\n",
+			"line": "116",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "114: \tcm.Set(\"monitoring.collection_interval\", \"30s\")\n115: \tcm.Set(\"monitoring.export_format\", \"json\")\n116: \tcm.Set(\"monitoring.http_server.enabled\", true)\n",
+			"line": "115",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "113: \tcm.Set(\"monitoring.enabled\", true)\n114: \tcm.Set(\"monitoring.collection_interval\", \"30s\")\n115: \tcm.Set(\"monitoring.export_format\", \"json\")\n",
+			"line": "114",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "112: \t// 监控配置\n113: \tcm.Set(\"monitoring.enabled\", true)\n114: \tcm.Set(\"monitoring.collection_interval\", \"30s\")\n",
+			"line": "113",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "109: \tcm.Set(\"processing.output_path\", \"./data/output\")\n110: \tcm.Set(\"processing.file_format\", \"csv\")\n111: \n",
+			"line": "110",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "108: \tcm.Set(\"processing.worker_count\", 4)\n109: \tcm.Set(\"processing.output_path\", \"./data/output\")\n110: \tcm.Set(\"processing.file_format\", \"csv\")\n",
+			"line": "109",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "107: \tcm.Set(\"processing.batch_size\", 100)\n108: \tcm.Set(\"processing.worker_count\", 4)\n109: \tcm.Set(\"processing.output_path\", \"./data/output\")\n",
+			"line": "108",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "106: \t// 处理配置\n107: \tcm.Set(\"processing.batch_size\", 100)\n108: \tcm.Set(\"processing.worker_count\", 4)\n",
+			"line": "107",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "103: \tcm.Set(\"server.read_timeout\", \"30s\")\n104: \tcm.Set(\"server.write_timeout\", \"30s\")\n105: \n",
+			"line": "104",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "102: \tcm.Set(\"server.port\", 8080)\n103: \tcm.Set(\"server.read_timeout\", \"30s\")\n104: \tcm.Set(\"server.write_timeout\", \"30s\")\n",
+			"line": "103",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "101: \tcm.Set(\"server.host\", \"0.0.0.0\")\n102: \tcm.Set(\"server.port\", 8080)\n103: \tcm.Set(\"server.read_timeout\", \"30s\")\n",
+			"line": "102",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "100: \t// 服务器配置\n101: \tcm.Set(\"server.host\", \"0.0.0.0\")\n102: \tcm.Set(\"server.port\", 8080)\n",
+			"line": "101",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "97: \tcm.Set(\"redis.database\", 0)\n98: \tcm.Set(\"redis.pool_size\", 10)\n99: \n",
+			"line": "98",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "96: \tcm.Set(\"redis.port\", 6379)\n97: \tcm.Set(\"redis.database\", 0)\n98: \tcm.Set(\"redis.pool_size\", 10)\n",
+			"line": "97",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "95: \tcm.Set(\"redis.host\", \"localhost\")\n96: \tcm.Set(\"redis.port\", 6379)\n97: \tcm.Set(\"redis.database\", 0)\n",
+			"line": "96",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "94: \t// Redis配置\n95: \tcm.Set(\"redis.host\", \"localhost\")\n96: \tcm.Set(\"redis.port\", 6379)\n",
+			"line": "95",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "91: \tcm.Set(\"database.mysql.max_idle_conns\", 5)\n92: \tcm.Set(\"database.mysql.timeout\", \"30s\")\n93: \n",
+			"line": "92",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "90: \tcm.Set(\"database.mysql.max_open_conns\", 10)\n91: \tcm.Set(\"database.mysql.max_idle_conns\", 5)\n92: \tcm.Set(\"database.mysql.timeout\", \"30s\")\n",
+			"line": "91",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "89: \tcm.Set(\"database.mysql.database\", \"edge_stream\")\n90: \tcm.Set(\"database.mysql.max_open_conns\", 10)\n91: \tcm.Set(\"database.mysql.max_idle_conns\", 5)\n",
+			"line": "90",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "88: \tcm.Set(\"database.mysql.password\", \"secret123\")\n89: \tcm.Set(\"database.mysql.database\", \"edge_stream\")\n90: \tcm.Set(\"database.mysql.max_open_conns\", 10)\n",
+			"line": "89",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "87: \tcm.Set(\"database.mysql.username\", \"root\")\n88: \tcm.Set(\"database.mysql.password\", \"secret123\")\n89: \tcm.Set(\"database.mysql.database\", \"edge_stream\")\n",
+			"line": "88",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "86: \tcm.Set(\"database.mysql.port\", 3306)\n87: \tcm.Set(\"database.mysql.username\", \"root\")\n88: \tcm.Set(\"database.mysql.password\", \"secret123\")\n",
+			"line": "87",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "85: \tcm.Set(\"database.mysql.host\", \"localhost\")\n86: \tcm.Set(\"database.mysql.port\", 3306)\n87: \tcm.Set(\"database.mysql.username\", \"root\")\n",
+			"line": "86",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "84: \t// 数据库配置\n85: \tcm.Set(\"database.mysql.host\", \"localhost\")\n86: \tcm.Set(\"database.mysql.port\", 3306)\n",
+			"line": "85",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "C:\\Users\\29948\\GolandProjects\\edge-stream\\examples\\complete\\main.go",
+			"code": "70: \tgo func() {\n71: \t\tcm.Watch(context.Background(), func(key string, oldValue, newValue interface{}) {\n72: \t\t\tfmt.Printf(\"配置变更: %s = %v -\u003e %v\\n\", key, oldValue, newValue)\n73: \t\t})\n74: \t}()\n",
+			"line": "71-73",
+			"column": "3",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 40,
+		"lines": 11634,
+		"nosec": 0,
+		"found": 65
+	},
+	"GosecVersion": "dev"
+}
