@@ -363,6 +363,7 @@ func TestStreamEngineMetrics(t *testing.T) {
 	metrics := processor.GetMetrics()
 	if metrics == nil {
 		t.Error("Metrics should not be nil")
+		return
 	}
 
 	// 测试指标更新

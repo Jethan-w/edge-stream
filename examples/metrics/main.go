@@ -159,21 +159,6 @@ func truncateString(s string, maxLen int) string {
 	return s[:maxLen]
 }
 
-// contains 检查字符串是否包含任一关键词
-func contains(s string, keywords []string) bool {
-	for _, keyword := range keywords {
-		if len(s) >= len(keyword) {
-			for i := 0; i <= len(s)-len(keyword); i++ {
-				if s[i:i+len(keyword)] == keyword {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
 func init() {
-	// 设置随机种子
-	rand.Seed(time.Now().UnixNano())
+	// Go 1.20+ 会自动初始化随机数生成器，无需手动设置种子
 }

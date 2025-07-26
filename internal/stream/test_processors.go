@@ -233,7 +233,8 @@ func (p *GenericTransformProcessor) Start(ctx context.Context) error {
 		return fmt.Errorf("processor '%s' is already running", p.id)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctxWithCancel, cancel := context.WithCancel(ctx)
+	_ = ctxWithCancel
 	p.cancel = cancel
 	p.status = StreamStatusRunning
 	p.metrics.StartTime = time.Now()
@@ -352,7 +353,8 @@ func (p *GenericSinkProcessor) Start(ctx context.Context) error {
 		return fmt.Errorf("processor '%s' is already running", p.id)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctxWithCancel, cancel := context.WithCancel(ctx)
+	_ = ctxWithCancel
 	p.cancel = cancel
 	p.status = StreamStatusRunning
 	p.metrics.StartTime = time.Now()

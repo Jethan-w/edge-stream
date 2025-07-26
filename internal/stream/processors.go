@@ -227,7 +227,6 @@ type JSONTransformProcessor struct {
 	metrics *StreamMetrics
 	cancel  context.CancelFunc
 	mutex   sync.RWMutex
-	window  WindowProcessor
 }
 
 // NewJSONTransformProcessor 创建新的JSON转换处理器

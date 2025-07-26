@@ -234,6 +234,5 @@ func truncateString(s string, maxLen int) string {
 }
 
 func init() {
-	// 设置随机种子
-	rand.Seed(time.Now().UnixNano())
+	// Go 1.20+ 自动初始化随机数生成器，无需手动设置种子
 }

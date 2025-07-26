@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -43,7 +42,7 @@ func (fcm *FileCheckpointManager) Save(ctx context.Context, checkpoint *Checkpoi
 	filePath := filepath.Join(fcm.basePath, filename)
 
 	// 写入文件
-	if err := ioutil.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write checkpoint file: %w", err)
 	}
 
@@ -53,7 +52,7 @@ func (fcm *FileCheckpointManager) Save(ctx context.Context, checkpoint *Checkpoi
 // Load 加载检查点
 func (fcm *FileCheckpointManager) Load(ctx context.Context, checkpointID string) (*Checkpoint, error) {
 	// 查找检查点文件
-	files, err := ioutil.ReadDir(fcm.basePath)
+	files, err := os.ReadDir(fcm.basePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read checkpoint directory: %w", err)
 	}
@@ -72,7 +71,7 @@ func (fcm *FileCheckpointManager) Load(ctx context.Context, checkpointID string)
 
 	// 读取文件
 	filePath := filepath.Join(fcm.basePath, targetFile)
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read checkpoint file: %w", err)
 	}
@@ -88,7 +87,7 @@ func (fcm *FileCheckpointManager) Load(ctx context.Context, checkpointID string)
 
 // List 列出检查点
 func (fcm *FileCheckpointManager) List(ctx context.Context) ([]*CheckpointInfo, error) {
-	files, err := ioutil.ReadDir(fcm.basePath)
+	files, err := os.ReadDir(fcm.basePath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []*CheckpointInfo{}, nil
@@ -112,7 +111,7 @@ func (fcm *FileCheckpointManager) List(ctx context.Context) ([]*CheckpointInfo, 
 
 		// 读取文件获取详细信息
 		filePath := filepath.Join(fcm.basePath, file.Name())
-		data, err := ioutil.ReadFile(filePath)
+		data, err := os.ReadFile(filePath)
 		if err != nil {
 			continue
 		}
@@ -122,10 +121,16 @@ func (fcm *FileCheckpointManager) List(ctx context.Context) ([]*CheckpointInfo, 
 			continue
 		}
 
+		// 获取文件信息
+		fileInfo, err := file.Info()
+		if err != nil {
+			continue
+		}
+
 		checkpointInfo := &CheckpointInfo{
 			ID:        checkpointID,
 			Timestamp: checkpoint.Timestamp,
-			Size:      file.Size(),
+			Size:      fileInfo.Size(),
 			States:    len(checkpoint.States),
 		}
 
@@ -142,7 +147,7 @@ func (fcm *FileCheckpointManager) List(ctx context.Context) ([]*CheckpointInfo, 
 
 // Delete 删除检查点
 func (fcm *FileCheckpointManager) Delete(ctx context.Context, checkpointID string) error {
-	files, err := ioutil.ReadDir(fcm.basePath)
+	files, err := os.ReadDir(fcm.basePath)
 	if err != nil {
 		return fmt.Errorf("failed to read checkpoint directory: %w", err)
 	}
